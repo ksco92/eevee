@@ -1,0 +1,26 @@
+{
+    "specVersion": 0,
+    "description": 123,
+    "tableType": true,
+    "isRawData": "yes",
+    "columns": [
+        55,
+        {
+            "name": "a",
+            "type": "int",
+            "description": "col a"
+        }
+    ],
+    "primaryKey": [
+        1,
+        "a"
+    ],
+    "partitions": "nope",
+    "dependsOn": [
+        2,
+        "x.y"
+    ],
+    "foreignKeys": [
+        77
+    ]
+}

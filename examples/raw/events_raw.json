@@ -1,0 +1,39 @@
+{
+    "$schema": "https://raw.githubusercontent.com/ksco92/eevee/main/packages/core/src/schema/table.schema.json",
+    "specVersion": "0",
+    "description": "Raw clickstream events as landed.",
+    "tableType": "iceberg_parquet",
+    "isRawData": true,
+    "columns": [
+        {
+            "name": "event_id",
+            "type": "long",
+            "description": "Unique event identifier."
+        },
+        {
+            "name": "customer_id",
+            "type": "long",
+            "description": "Customer the event belongs to."
+        },
+        {
+            "name": "event_ts",
+            "type": "timestamp",
+            "description": "Event timestamp."
+        },
+        {
+            "name": "payload",
+            "type": "string",
+            "description": "Raw JSON payload."
+        }
+    ],
+    "primaryKey": [
+        "event_id"
+    ],
+    "partitions": [
+        {
+            "name": "event_ts",
+            "type": "day",
+            "description": "Daily partition derived from the event timestamp."
+        }
+    ]
+}

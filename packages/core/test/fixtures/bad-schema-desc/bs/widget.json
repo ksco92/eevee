@@ -1,0 +1,16 @@
+{
+    "specVersion": "0",
+    "description": "A valid table beside an invalid schema description.",
+    "tableType": "hive_parquet",
+    "isRawData": true,
+    "columns": [
+        {
+            "name": "id",
+            "type": "bigint",
+            "description": "Identifier."
+        }
+    ],
+    "primaryKey": [
+        "id"
+    ]
+}

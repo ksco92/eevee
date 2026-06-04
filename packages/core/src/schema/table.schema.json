@@ -1,0 +1,128 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/ksco92/eevee/main/packages/core/src/schema/table.schema.json",
+    "title": "FDD Table Definition",
+    "description": "Structural schema (Layer 1) for an FDD table-definition file.",
+    "type": "object",
+    "required": [
+        "specVersion",
+        "description",
+        "tableType",
+        "isRawData",
+        "columns",
+        "primaryKey"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "$schema": {
+            "type": "string"
+        },
+        "specVersion": {
+            "type": "string",
+            "enum": [
+                "0"
+            ]
+        },
+        "description": {
+            "type": "string",
+            "minLength": 1
+        },
+        "tableType": {
+            "type": "string",
+            "enum": [
+                "hive_parquet",
+                "iceberg_parquet",
+                "postgres_18"
+            ]
+        },
+        "isRawData": {
+            "type": "boolean"
+        },
+        "columns": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "$ref": "#/definitions/column"
+            }
+        },
+        "primaryKey": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "string",
+                "minLength": 1
+            }
+        },
+        "partitions": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/column"
+            }
+        },
+        "dependsOn": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$"
+            }
+        },
+        "foreignKeys": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/foreignKey"
+            }
+        }
+    },
+    "definitions": {
+        "column": {
+            "type": "object",
+            "required": [
+                "name",
+                "type",
+                "description"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "type": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "description": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            }
+        },
+        "foreignKey": {
+            "type": "object",
+            "required": [
+                "sourceTable",
+                "sourceColumn",
+                "localColumn",
+                "allowNulls"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "sourceTable": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$"
+                },
+                "sourceColumn": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "localColumn": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "allowNulls": {
+                    "type": "boolean"
+                }
+            }
+        }
+    }
+}

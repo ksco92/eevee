@@ -1,0 +1,32 @@
+{
+    "specVersion": "0",
+    "description": "Child table referencing a non-key column of the parent.",
+    "tableType": "hive_parquet",
+    "isRawData": false,
+    "columns": [
+        {
+            "name": "child_id",
+            "type": "bigint",
+            "description": "Primary key."
+        },
+        {
+            "name": "parent_label",
+            "type": "string",
+            "description": "Reference to the parent label."
+        }
+    ],
+    "primaryKey": [
+        "child_id"
+    ],
+    "dependsOn": [
+        "w.parent"
+    ],
+    "foreignKeys": [
+        {
+            "sourceTable": "w.parent",
+            "sourceColumn": "label",
+            "localColumn": "parent_label",
+            "allowNulls": true
+        }
+    ]
+}
