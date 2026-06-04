@@ -1,0 +1,4 @@
+{
+    "specVersion": "0",
+    "description": "A schema whose folder name is not lowercase snake_case."
+}

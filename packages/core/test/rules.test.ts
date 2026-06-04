@@ -279,6 +279,48 @@ test('iceberg transform legality is skipped when the source type is unparseable'
     expect(codes(runSemanticRules(world))).not.toContain('ICEBERG_TRANSFORM_SOURCE_TYPE_LEGAL');
 });
 
+test('Iceberg allows multiple transforms on the same source column', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            columns: [
+                col('ts', 'timestamp'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('ts', 'year'),
+                part('ts', 'month'),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('NO_DUPLICATE_PARTITIONS');
+});
+
+test('Iceberg flags a genuinely duplicated partition (same source and transform)', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            columns: [
+                col('ts', 'timestamp'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('ts', 'day'),
+                part('ts', 'day'),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('NO_DUPLICATE_PARTITIONS');
+});
+
 test('a valid iceberg partition produces no partition violations', () => {
     const world = makeWorld([
         makeTable({
@@ -446,6 +488,69 @@ test('FK_SOURCE_IS_KEY warns when the source column is not the primary key', () 
     })));
     expect(result).toContain('FK_SOURCE_IS_KEY');
     expect(result).not.toContain('FK_SOURCE_COLUMN_EXISTS');
+});
+
+test('foreign keys to a structurally invalid target skip column-level checks', () => {
+    const world = makeWorld([
+        makeTable({
+            schema: 'raw',
+            name: 'src',
+            structurallyValid: false,
+            columns: [],
+            primaryKey: [],
+        }),
+        makeTable({
+            name: 'child',
+            isRawData: false,
+            columns: [
+                col('src_id', 'int'),
+            ],
+            primaryKey: [
+                'src_id',
+            ],
+            dependsOn: [
+                'raw.src',
+            ],
+            foreignKeys: [
+                {
+                    sourceTable: 'raw.src',
+                    sourceColumn: 'id',
+                    localColumn: 'src_id',
+                    allowNulls: false,
+                },
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('FK_SOURCE_COLUMN_EXISTS');
+    expect(result).not.toContain('FK_SOURCE_IS_KEY');
+    expect(result).not.toContain('FK_SOURCE_TABLE_RESOLVES');
+});
+
+test('a self-referential foreign key needs no self-dependency and forms no cycle', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 'employees',
+            tableType: 'iceberg_parquet',
+            isRawData: true,
+            columns: [
+                col('id', 'long'),
+                col('manager_id', 'long'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+            foreignKeys: [
+                {
+                    sourceTable: 'analytics.employees',
+                    sourceColumn: 'id',
+                    localColumn: 'manager_id',
+                    allowNulls: true,
+                },
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
 });
 
 /// Acyclic dependency graph

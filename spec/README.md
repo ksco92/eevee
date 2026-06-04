@@ -18,10 +18,13 @@ A `tableType` selects the engine; engine-specific checks follow from it. v0 supp
     └── ...
 ```
 
-- Each directory directly under the root is a **schema**.
+- Each directory directly under the root is a **schema**. Directories whose names start with `.`
+  (e.g. `.git`) are ignored.
 - Each `<table>.json` is a **table definition**; the file name (without `.json`) is the table name.
 - Exactly one **schema-description file** per schema folder, named identically to the folder.
 - A table may not share its schema's name (that file name is reserved for the schema description).
+- Schema and table names must be lowercase `snake_case` (matching `^[a-z0-9_]+$`) so they can be
+  referenced from `dependsOn` and foreign keys.
 
 ## Schema-description file (`<schema>.json`)
 
@@ -86,7 +89,9 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 - **`iceberg_parquet`** — each partition derives from a data column: `name` is the **source column**
   (must exist in `columns`), `type` is an Iceberg **transform**
   (`identity`, `year`, `month`, `day`, `hour`, `void`, `bucket[N]`, `truncate[W]`). The transform must
-  be legal on the source column's type (e.g. `hour` needs a timestamp).
+  be legal on the source column's type (e.g. `hour` needs a timestamp). Multiple partitions may share
+  the same source column with different transforms (e.g. `year(ts)` and `month(ts)`); the
+  (source column, transform) pair must be unique. Type and transform names are case-insensitive.
 - **`postgres_18`** — partitioning is **deferred to v0.1**; `partitions` is rejected in v0.
 
 ## Validation layers
@@ -98,3 +103,15 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
   with the `fdd` CLI / `fdd` library.
 
 Cross-schema references (in `dependsOn` and foreign keys) are allowed.
+
+## Known limitations (v0)
+
+- **Postgres partitioning** is not yet modeled; `partitions` is rejected for `postgres_18`. Planned
+  for v0.1.
+- **Nested Iceberg types** (`list`, `map`, `struct`) are not yet accepted as column types; primitives
+  plus `decimal(p,s)` and `fixed[L]` are. Hive nested types (`array`, `map`, `struct`, `uniontype`)
+  are supported.
+- A schema folder is **flat**: nested subdirectories under a schema are ignored.
+- If a `<schema>.json` file contains a table definition (a table sharing the schema's name), it is read
+  as the schema description and fails structural validation rather than producing a name-collision
+  message.

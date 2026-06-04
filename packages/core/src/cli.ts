@@ -71,6 +71,11 @@ function runValidate(rest: string[]): number {
         return 1;
     }
 
+    if (format !== 'human' && format !== 'json') {
+        console.error(`unknown format "${format}" (expected "human" or "json")`);
+        return 1;
+    }
+
     let result: ValidationResult;
     try {
         result = validateRoot(root);

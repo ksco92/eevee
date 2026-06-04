@@ -42,18 +42,38 @@ artifacts that survive merge is not.
 If a contribution was written with AI assistance, the human contributor is the
 sole credited author.
 
-## Mandatory review
+## Workflow
 
-Every PR goes through two reviews before merge:
+The dev loop for every change:
 
-- **pr-reviewer** — adversarial check of correctness, acceptance criteria, and
-  test coverage on the diff.
-- **oss-reviewer** — OSS-readiness: the banned-word list above, no AI-authorship
-  signals, license headers where required, doc quality, and that nothing secret
-  or machine-specific is committed.
+1. Add the feature (code + tests + doc sync — see "Documentation sync" below).
+2. Open a PR.
+3. Run **both** reviewers on it:
+   - **pr-reviewer** (the agent) — adversarial check of correctness, acceptance
+     criteria, and test coverage on the diff.
+   - **oss-reviewer** (the skill in `~/.claude/skills/oss-reviewer`) —
+     OSS-readiness: fresh-clone bootstrap, the banned-word list above, AI-code
+     tells, license detectability, README quick-start accuracy, and that nothing
+     secret or machine-specific is committed.
+4. Merge **only if both reviewers pass**. A FAIL from either blocks the merge —
+   fix the findings and re-run before merging.
 
-Branch protection requires green CI plus review. This gate is human-enforced
-until wired into required status checks.
+Branch protection requires green CI plus both reviews. This gate is
+human-enforced until wired into required status checks.
+
+## Documentation sync
+
+Before opening a PR, re-read this file and `README.md` and update them if the
+change touches anything they document. The change is not complete until the docs
+match it. Ask, in order:
+
+- Does it change a command, path, script, or the quick-start? → update `README.md`.
+- Does it change a convention, policy, the review workflow, or the coverage rule?
+  → update `CLAUDE.md`.
+- Does it add, rename, or remove a `tableType`, rule code, field, or violation?
+  → update `spec/README.md` and the JSON Schema, and add fixtures.
+
+Reviewers reject PRs whose behavior and docs have drifted apart.
 
 ## Testing and coverage
 

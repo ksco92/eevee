@@ -69,6 +69,27 @@ test('reports a structurally invalid schema-description file', () => {
     expect(schemaErrors.length).toBeGreaterThan(0);
 });
 
+test('skips hidden directories at the root', () => {
+    const {
+        world, violations, 
+    } = loadRoot(fixture('hidden-dirs'));
+    expect([
+        ...world.schemas.keys(),
+    ]).toEqual([
+        'real',
+    ]);
+    expect(violations.some((violation) => violation.schema === '.hidden')).toBe(false);
+});
+
+test('reports schema and table names that are not lowercase snake_case', () => {
+    const {
+        violations, 
+    } = loadRoot(fixture('bad-names'));
+    const reported = codes(violations);
+    expect(reported).toContain('SCHEMA_NAME_VALID');
+    expect(reported).toContain('TABLE_NAME_VALID');
+});
+
 test('throws when the root is not a directory', () => {
     expect(() => loadRoot(path.resolve(__dirname, 'fixtures', 'does-not-exist'))).toThrow('not a directory');
 });

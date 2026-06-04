@@ -60,17 +60,18 @@ export interface IcebergType {
     readonly fixedLength?: number;
 }
 
-const DECIMAL_RE = /^decimal\((\d+),\s*(\d+)\)$/;
-const FIXED_RE = /^fixed\[(\d+)\]$/;
+const DECIMAL_RE = /^decimal\(\s*(\d+)\s*,\s*(\d+)\s*\)$/;
+const FIXED_RE = /^fixed\[\s*(\d+)\s*\]$/;
 
 /**
- * Parse an Iceberg type string into a structured type.
+ * Parse an Iceberg type string into a structured type. Matching is
+ * case-insensitive, consistent with the Hive and Postgres registries.
  *
  * @param typeStr Type string from a column definition.
  * @returns The parsed type, or null if it is not a valid v0 Iceberg type.
  */
 export function parseIcebergType(typeStr: string): IcebergType | null {
-    const trimmed = typeStr.trim();
+    const trimmed = typeStr.trim().toLowerCase();
 
     if ((ICEBERG_PRIMITIVES as string[]).includes(trimmed)) {
         return {
@@ -142,17 +143,17 @@ export interface IcebergTransform {
     readonly param?: number;
 }
 
-const BUCKET_RE = /^bucket\[(\d+)\]$/;
-const TRUNCATE_RE = /^truncate\[(\d+)\]$/;
+const BUCKET_RE = /^bucket\[\s*(\d+)\s*\]$/;
+const TRUNCATE_RE = /^truncate\[\s*(\d+)\s*\]$/;
 
 /**
- * Parse an Iceberg transform string.
+ * Parse an Iceberg transform string. Matching is case-insensitive.
  *
  * @param transformStr Transform string from a partition definition.
  * @returns The parsed transform, or null if it is not a valid transform.
  */
 export function parseIcebergTransform(transformStr: string): IcebergTransform | null {
-    const trimmed = transformStr.trim();
+    const trimmed = transformStr.trim().toLowerCase();
 
     if ((NULLARY_TRANSFORMS as string[]).includes(trimmed)) {
         return {

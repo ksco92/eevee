@@ -41,23 +41,17 @@ npm run dev      # lint + build + test (with 95% coverage gate)
 
 ## Spec evolution
 
-The standard and its reference validator are meant to grow together: a new engine
-adds a `tableType`, which unlocks new type-registry entries and new semantic
-rules, which in turn extend the JSON Schema and the example dataset. The project
-treats those as one change, not four.
+The standard and its reference validator grow together: a new engine adds a
+`tableType`, which unlocks type-registry entries and semantic rules, which in
+turn extend the JSON Schema and the example dataset. The project treats those as
+one change, not four.
 
-Tooling — including AI-assisted contributions — may *propose* changes to the spec
-itself: a new rule plus its fixtures, a type added to a registry, a corrected
-example, a schema tightening. Such proposals are encouraged, but they land the
-same way every other change does, and only with maintainer approval:
-
-- one PR that moves the rule, its fixtures, the JSON Schema, and the docs together,
-- green CI (lint, tests at the coverage gate, and self-validation against
-  `examples/`),
-- both reviews described in [`CLAUDE.md`](CLAUDE.md).
-
-Nothing rewrites `main` on its own. A proposal that cannot keep the example
-dataset valid, or that drops coverage, does not merge.
+Because of that coupling, every change carries a documentation check. **Before
+opening a PR, re-read [`CLAUDE.md`](CLAUDE.md) and this README and update them if
+the change touches anything they describe** — a command, a convention, a rule
+code, a field, a `tableType`, or the quick-start. A change whose behavior and
+docs have drifted apart is incomplete, and reviewers reject it. The full policy
+is in `CLAUDE.md`.
 
 ## License
 

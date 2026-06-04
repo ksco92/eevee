@@ -111,6 +111,10 @@ function normalizeSchemaDescription(raw: unknown): SchemaDescription {
     };
 }
 
+/// Schema and table names must be lowercase snake_case so they can be referenced
+/// from `dependsOn` and foreign keys, whose patterns require the same shape.
+const NAME_RE = /^[a-z0-9_]+$/;
+
 /**
  * Load a dataset root into a `World`.
  *
@@ -130,13 +134,27 @@ export function loadRoot(rootDir: string): LoadOutcome {
 
     const schemaDirs = fs.readdirSync(absoluteRoot, {
         withFileTypes: true,
-    }).filter((entry) => entry.isDirectory());
+    }).filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
+        .sort((a, b) => a.name.localeCompare(b.name));
 
     for (const schemaDir of schemaDirs) {
         const schemaName = schemaDir.name;
         const dirPath = path.join(absoluteRoot, schemaName);
+
+        if (!NAME_RE.test(schemaName)) {
+            violations.push({
+                level: 'error',
+                code: 'SCHEMA_NAME_VALID',
+                schema: schemaName,
+                path: dirPath,
+                message: `schema name "${schemaName}" must be lowercase snake_case (matching ${NAME_RE})`,
+            });
+        }
+
         const descFileName = `${schemaName}.json`;
-        const jsonFiles = fs.readdirSync(dirPath).filter((file) => file.endsWith('.json'));
+        const jsonFiles = fs.readdirSync(dirPath)
+            .filter((file) => file.endsWith('.json'))
+            .sort((a, b) => a.localeCompare(b));
 
         let description: SchemaDescription | null = null;
         const loadedTables: LoadedTable[] = [];
@@ -177,6 +195,18 @@ export function loadRoot(rootDir: string): LoadOutcome {
 
             const tableName = file.slice(0, -'.json'.length);
             const qualifiedName = `${schemaName}.${tableName}`;
+
+            if (!NAME_RE.test(tableName)) {
+                violations.push({
+                    level: 'error',
+                    code: 'TABLE_NAME_VALID',
+                    schema: schemaName,
+                    table: tableName,
+                    path: filePath,
+                    message: `table name "${tableName}" must be lowercase snake_case (matching ${NAME_RE})`,
+                });
+            }
+
             const structural = validateStructure('table', parsed);
             for (const structuralError of structural.errors) {
                 violations.push({

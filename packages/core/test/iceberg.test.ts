@@ -58,6 +58,23 @@ test('unknown iceberg types are rejected', () => {
     expect(isValidIcebergType('whatever')).toBe(false);
 });
 
+test('iceberg type and transform parsing is case-insensitive', () => {
+    expect(parseIcebergType('LONG')).toEqual({
+        kind: IcebergTypeKind.LONG,
+    });
+    expect(parseIcebergTransform('DAY')).toEqual({
+        kind: IcebergTransformKind.DAY,
+    });
+});
+
+test('decimal tolerates surrounding whitespace', () => {
+    expect(parseIcebergType('decimal( 10 , 2 )')).toEqual({
+        kind: IcebergTypeKind.DECIMAL,
+        decimalPrecision: 10,
+        decimalScale: 2,
+    });
+});
+
 /// parseIcebergTransform
 
 test('nullary transforms parse', () => {
