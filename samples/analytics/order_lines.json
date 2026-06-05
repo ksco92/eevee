@@ -69,6 +69,11 @@
             }
         ]
     },
+    "tableProperties": {
+        "parquet.compression": "SNAPPY",
+        "transactional": "true",
+        "transactional_properties": "insert_only"
+    },
     "dependsOn": [
         "analytics.customers",
         "analytics.sessions"
