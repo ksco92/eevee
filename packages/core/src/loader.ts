@@ -90,6 +90,8 @@ function normalizeColumns(value: unknown): Column[] {
             generated: asOptionalString(record.generated),
             expression: asOptionalString(record.expression),
             expressionColumns: 'expressionColumns' in record ? asStringArray(record.expressionColumns) : undefined,
+            identity: asOptionalString(record.identity),
+            default: asOptionalString(record.default),
         };
     });
 }

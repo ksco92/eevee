@@ -1442,6 +1442,162 @@ test('generated columns are ignored for non-Postgres engines', () => {
     expect(result).not.toContain('POSTGRES_GENERATED_EXPRESSION_COLUMN_EXISTS');
 });
 
+/// Postgres identity and default columns
+
+test('a valid Postgres identity column produces no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                {
+                    name: 'id',
+                    type: 'bigint',
+                    description: 'surrogate key',
+                    identity: 'always',
+                },
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('a valid Postgres default column produces no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                {
+                    name: 'created_at',
+                    type: 'timestamptz',
+                    description: 'creation time',
+                    default: 'now()',
+                },
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('POSTGRES_IDENTITY_VALID fires on an unknown identity kind', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                {
+                    name: 'id',
+                    type: 'bigint',
+                    description: 'id',
+                    identity: 'sometimes',
+                },
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_IDENTITY_VALID');
+});
+
+test('POSTGRES_IDENTITY_TYPE_INTEGER fires when an identity column is not an integer type', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                {
+                    name: 'id',
+                    type: 'text',
+                    description: 'id',
+                    identity: 'always',
+                },
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_IDENTITY_TYPE_INTEGER');
+});
+
+test('POSTGRES_COLUMN_GENERATION_EXCLUSIVE fires when a column is both generated and has a default', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                {
+                    name: 'x',
+                    type: 'integer',
+                    description: 'x',
+                    generated: 'stored',
+                    default: '0',
+                },
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_COLUMN_GENERATION_EXCLUSIVE');
+});
+
+test('POSTGRES_COLUMN_GENERATION_EXCLUSIVE fires when a column is both an identity and has a default', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                {
+                    name: 'id',
+                    type: 'bigint',
+                    description: 'id',
+                    identity: 'always',
+                    default: '1',
+                },
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_COLUMN_GENERATION_EXCLUSIVE');
+});
+
+test('identity and default attributes are ignored for non-Postgres engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                {
+                    name: 'id',
+                    type: 'int',
+                    description: 'id',
+                    identity: 'sometimes',
+                    default: '0',
+                },
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('POSTGRES_IDENTITY_VALID');
+    expect(result).not.toContain('POSTGRES_COLUMN_GENERATION_EXCLUSIVE');
+});
+
 /// Postgres unique and check constraints
 
 test('a valid Postgres unique constraint produces no violations', () => {

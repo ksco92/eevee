@@ -54,6 +54,10 @@ test('loads the example root cleanly', () => {
     expect(generatedColumn?.expressionColumns).toEqual([
         'lifetime_value',
     ]);
+    const identityColumn = customers?.definition.columns.find((column) => column.name === 'customer_id');
+    expect(identityColumn?.identity).toBe('always');
+    const defaultColumn = customers?.definition.columns.find((column) => column.name === 'is_active');
+    expect(defaultColumn?.default).toBe('true');
 
     const customersRaw = world.tables.get('raw.customers_raw');
     expect(customersRaw?.definition.bucketing?.bucketCount).toBe(16);
