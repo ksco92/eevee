@@ -18,7 +18,7 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .coverage
-packages/python/src/fdd/_bin/
+packages/python/src/flexdataset/_bin/
 
 # compiled standalone binaries
 dist-bin/

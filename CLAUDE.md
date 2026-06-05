@@ -110,7 +110,7 @@ review gates, never directly on `main`.
 
 ## Python wrapper
 
-`packages/python` is the `fdd` PyPI package: a thin client that shells out to the
+`packages/python` is the `flexdataset` PyPI package: a thin client that shells out to the
 CLI and returns typed results. It follows the maintainer's Python coding guide and
 mirrors the `pikachu` repo's tooling (kept self-contained here rather than via a
 machine-specific `@import`, since this repo is public):

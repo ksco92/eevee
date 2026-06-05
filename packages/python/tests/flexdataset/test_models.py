@@ -1,6 +1,6 @@
 """Tests for the FDD result models."""
 
-from fdd.models import ValidationResult, Violation
+from flexdataset.models import ValidationResult, Violation
 
 
 def test_violation_from_dict_full() -> None:

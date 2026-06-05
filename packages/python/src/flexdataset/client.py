@@ -1,4 +1,4 @@
-"""Client for invoking the fdd CLI and parsing its output."""
+"""Client for invoking the flexdataset CLI and parsing its output."""
 
 import json
 import subprocess
@@ -6,16 +6,16 @@ from pathlib import Path
 
 from typing_extensions import Self
 
-from fdd.binary import resolve_binary
-from fdd.models import ValidationResult
+from flexdataset.binary import resolve_binary
+from flexdataset.models import ValidationResult
 
 
 class FddError(RuntimeError):
-    """Raised when the fdd CLI fails in a way that yields no parseable output."""
+    """Raised when the flexdataset CLI fails in a way that yields no parseable output."""
 
 
 class FddClient:
-    """Client for the fdd command-line tool."""
+    """Client for the flexdataset command-line tool."""
 
     def __init__(self: Self, command: list[str] | None = None) -> None:
         """
@@ -71,7 +71,7 @@ class FddClient:
         """
         completed = self._run([command, str(root)])
         if completed.returncode != 0:
-            raise FddError(completed.stderr.strip() or f"fdd {command} failed")
+            raise FddError(completed.stderr.strip() or f"flexdataset {command} failed")
         return completed.stdout
 
     def _run(self: Self, args: list[str]) -> "subprocess.CompletedProcess[str]":

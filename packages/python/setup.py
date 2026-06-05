@@ -3,7 +3,7 @@
 from setuptools import find_packages, setup
 
 setup(
-    name="fdd",
+    name="flexdataset",
     version="0.3.0",
     description="Python client for the Flexible Dataset Definition (FDD) validator.",
     license="Apache-2.0",
@@ -15,7 +15,7 @@ setup(
         "": "src",
     },
     package_data={
-        "fdd": [
+        "flexdataset": [
             "_bin/*",
         ],
     },

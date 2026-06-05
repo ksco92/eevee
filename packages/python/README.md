@@ -1,36 +1,37 @@
-# fdd (Python)
+# flexdataset (Python)
 
 Python client for the [Flexible Dataset Definition (FDD)](https://github.com/ksco92/eevee) validator.
-It shells out to the `fdd` CLI and returns typed results.
+It shells out to the `flexdataset` CLI and returns typed results.
 
 ## Install
 
 ```bash
-pip install fdd
+pip install flexdataset
 ```
 
-Platform wheels bundle the `fdd` binary, so nothing else is needed. On a platform without a wheel,
+Published from each `v*` release of the [project](https://github.com/ksco92/eevee). Platform wheels
+bundle the `flexdataset` binary, so nothing else is needed. On a platform without a wheel,
 install the source distribution and point `FDD_BINARY` at the CLI — a downloaded standalone binary, or
 `node /path/to/dist/src/cli.js`.
 
 ## Use
 
 ```python
-import fdd
+import flexdataset
 
-result = fdd.validate("path/to/root")
+result = flexdataset.validate("path/to/root")
 print(result.ok, len(result.errors), len(result.warnings))
 for violation in result.errors:
     print(violation.code, violation.schema, violation.table, violation.message)
 
-dag_svg = fdd.graph("path/to/root")   # dependency DAG
-er_svg = fdd.er("path/to/root")       # entity-relationship diagram
+dag_svg = flexdataset.graph("path/to/root")   # dependency DAG
+er_svg = flexdataset.er("path/to/root")       # entity-relationship diagram
 ```
 
 Or use the client directly:
 
 ```python
-from fdd import FddClient
+from flexdataset import FddClient
 
 client = FddClient()                                  # resolves FDD_BINARY / the bundled binary
 explicit = FddClient(command=["node", "dist/src/cli.js"])

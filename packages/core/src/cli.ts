@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * `fdd` command-line interface.
+ * `flexdataset` command-line interface.
  *
  * Commands: `validate` (structural + semantic checks), `graph` (dependency DAG
  * as SVG), and `er` (entity-relationship diagram as SVG). The CLI is a thin
@@ -28,13 +28,13 @@ import {
     ValidationResult, Violation,
 } from './model';
 
-const USAGE = `fdd — Flexible Dataset Definition validator
+const USAGE = `flexdataset — Flexible Dataset Definition validator
 
 Usage:
-  fdd validate <root> [--format json|human]
-  fdd graph <root> [--out <file.svg>]
-  fdd er <root> [--out <file.svg>]
-  fdd help
+  flexdataset validate <root> [--format json|human]
+  flexdataset graph <root> [--out <file.svg>]
+  flexdataset er <root> [--out <file.svg>]
+  flexdataset help
 
 Options:
   --format   Output format for "validate" (default: human).
@@ -95,7 +95,7 @@ function runValidate(rest: string[]): number {
 
     const root = positional[0];
     if (!root) {
-        console.error('usage: fdd validate <root> [--format json|human]');
+        console.error('usage: flexdataset validate <root> [--format json|human]');
         return 1;
     }
 
@@ -131,7 +131,7 @@ async function runDiagram(command: 'graph' | 'er', rest: string[]): Promise<numb
 
     const root = positional[0];
     if (!root) {
-        console.error(`usage: fdd ${command} <root> [--out <file.svg>]`);
+        console.error(`usage: flexdataset ${command} <root> [--out <file.svg>]`);
         return 1;
     }
 

@@ -1,8 +1,8 @@
 """Python client for the Flexible Dataset Definition (FDD) validator."""
 
-from fdd.binary import FddBinaryNotFoundError, resolve_binary
-from fdd.client import FddClient, FddError, er, graph, validate
-from fdd.models import ValidationResult, Violation
+from flexdataset.binary import FddBinaryNotFoundError, resolve_binary
+from flexdataset.client import FddClient, FddError, er, graph, validate
+from flexdataset.models import ValidationResult, Violation
 
 __version__ = "0.3.0"
 
