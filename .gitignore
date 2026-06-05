@@ -9,8 +9,9 @@ packages/core/**/*.js
 !packages/core/eslint.config.js
 packages/core/**/*.d.ts
 
-# intentionally uncommitted working plan
+# intentionally uncommitted working plans
 TODO.md
+docs/validation-gaps.md
 
 # Python
 .venv
