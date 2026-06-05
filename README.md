@@ -29,11 +29,11 @@ v0 supports three engines: `hive_parquet`, `iceberg_parquet`, `postgres_18`.
 
 ## Install
 
-Released builds (published from each `v*` tag):
+Released builds:
 
-- **npm:** `npm install -g flexdataset` (the CLI, run with Node).
+- **npm:** `npm install -g flexdataset` (the CLI, run with Node). Published continuously from `main`.
 - **Standalone binary:** download the build for your platform from
-  [Releases](https://github.com/ksco92/eevee/releases); a single file, no Node required.
+  [Releases](https://github.com/ksco92/eevee/releases); a single file, no Node required. Cut on each `v*` tag.
 - **Python:** `pip install flexdataset`, a typed client that drives the CLI; platform wheels bundle the binary.
   See [`packages/python`](packages/python).
 
