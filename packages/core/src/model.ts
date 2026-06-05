@@ -267,6 +267,9 @@ export interface TableDefinition {
     /** Iceberg sort order (ordered sort fields). Optional; other engines ignore it. */
     readonly sortOrder: SortField[];
 
+    /** Iceberg identifier fields (the row-identity / equality-delete key). Optional. */
+    readonly identifierFields: string[];
+
     /** Secondary indexes (Postgres). Optional; other engines ignore them. */
     readonly indexes: Index[];
 

@@ -2440,6 +2440,150 @@ test('sort order is ignored for non-Iceberg engines', () => {
     expect(result).not.toContain('ICEBERG_SORT_DIRECTION_VALID');
 });
 
+/// Iceberg identifier fields
+
+test('valid Iceberg identifier fields produce no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            formatVersion: 2,
+            identifierFields: [
+                'id',
+            ],
+            columns: [
+                col('id', 'long', false),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2 fires on a format-version-1 table', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            formatVersion: 1,
+            identifierFields: [
+                'id',
+            ],
+            columns: [
+                col('id', 'long', false),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2');
+});
+
+test('ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2 stays silent when the format version is unspecified', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            identifierFields: [
+                'id',
+            ],
+            columns: [
+                col('id', 'long', false),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2');
+});
+
+test('ICEBERG_IDENTIFIER_COLUMN_EXISTS fires when an identifier field is missing', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            formatVersion: 2,
+            identifierFields: [
+                'ghost',
+            ],
+            columns: [
+                col('id', 'long', false),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_IDENTIFIER_COLUMN_EXISTS');
+});
+
+test('ICEBERG_IDENTIFIER_REQUIRED fires when an identifier field is nullable', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            formatVersion: 2,
+            identifierFields: [
+                'nick',
+            ],
+            columns: [
+                col('id', 'long', false),
+                col('nick', 'string', true),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_IDENTIFIER_REQUIRED');
+});
+
+test('ICEBERG_IDENTIFIER_TYPE_PRIMITIVE fires when an identifier field is a float', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            formatVersion: 2,
+            identifierFields: [
+                'ratio',
+            ],
+            columns: [
+                col('id', 'long', false),
+                col('ratio', 'float'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_IDENTIFIER_TYPE_PRIMITIVE');
+});
+
+test('identifier fields are ignored for non-Iceberg engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            identifierFields: [
+                'ghost',
+            ],
+            columns: [
+                col('id', 'integer'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('ICEBERG_IDENTIFIER_COLUMN_EXISTS');
+    expect(result).not.toContain('ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2');
+});
+
 /// Iceberg table properties
 
 function icebergWithProps(tableProperties: Record<string, string>) {
@@ -2457,6 +2601,57 @@ function icebergWithProps(tableProperties: Record<string, string>) {
         }),
     ]);
 }
+
+test('a valid commit.retry property set produces no violations', () => {
+    const result = runSemanticRules(icebergWithProps({
+        'commit.retry.num-retries': '4',
+        'commit.retry.min-wait-ms': '100',
+        'commit.retry.max-wait-ms': '60000',
+        'commit.retry.total-timeout-ms': '1800000',
+    }));
+    expect(result).toHaveLength(0);
+});
+
+test('ICEBERG_PROPERTY_NON_NEGATIVE_INT fires on a non-numeric num-retries', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'commit.retry.num-retries': 'lots',
+    })));
+    expect(result).toContain('ICEBERG_PROPERTY_NON_NEGATIVE_INT');
+});
+
+test('commit.retry.num-retries of zero is allowed', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'commit.retry.num-retries': '0',
+    })));
+    expect(result).not.toContain('ICEBERG_PROPERTY_NON_NEGATIVE_INT');
+});
+
+test('ICEBERG_COMMIT_RETRY_ORDERING fires when min-wait exceeds max-wait', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'commit.retry.min-wait-ms': '60000',
+        'commit.retry.max-wait-ms': '100',
+        'commit.retry.total-timeout-ms': '1800000',
+    })));
+    expect(result).toContain('ICEBERG_COMMIT_RETRY_ORDERING');
+});
+
+test('ICEBERG_COMMIT_RETRY_ORDERING fires when max-wait exceeds total-timeout', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'commit.retry.min-wait-ms': '100',
+        'commit.retry.max-wait-ms': '1800000',
+        'commit.retry.total-timeout-ms': '60000',
+    })));
+    expect(result).toContain('ICEBERG_COMMIT_RETRY_ORDERING');
+});
+
+test('ICEBERG_COMMIT_RETRY_ORDERING stays silent when a wait is not a positive integer', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'commit.retry.min-wait-ms': '0',
+        'commit.retry.max-wait-ms': '60000',
+        'commit.retry.total-timeout-ms': '1800000',
+    })));
+    expect(result).not.toContain('ICEBERG_COMMIT_RETRY_ORDERING');
+});
 
 test('ICEBERG_PROPERTY_ENUM_VALID fires on an unknown compression codec', () => {
     const result = codes(runSemanticRules(icebergWithProps({

@@ -55,6 +55,7 @@ export interface TableInput {
     primaryKey?: string[];
     partitions?: Partition[];
     sortOrder?: SortField[];
+    identifierFields?: string[];
     indexes?: Index[];
     uniqueConstraints?: UniqueConstraint[];
     checkConstraints?: CheckConstraint[];
@@ -86,6 +87,7 @@ export function makeTable(input: TableInput): TableTypeBase {
             primaryKey: input.primaryKey ?? [],
             partitions: input.partitions ?? [],
             sortOrder: input.sortOrder ?? [],
+            identifierFields: input.identifierFields ?? [],
             indexes: input.indexes ?? [],
             uniqueConstraints: input.uniqueConstraints ?? [],
             checkConstraints: input.checkConstraints ?? [],

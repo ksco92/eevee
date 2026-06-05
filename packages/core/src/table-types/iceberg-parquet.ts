@@ -15,6 +15,7 @@ import {
     TableTypeBase,
 } from '../table-type';
 import {
+    IcebergTypeKind,
     isValidIcebergType,
     parseIcebergTransform,
     parseIcebergType,
@@ -30,6 +31,16 @@ import {
  */
 function isPositiveInteger(value: string): boolean {
     return /^\d+$/.test(value) && Number(value) > 0;
+}
+
+/**
+ * Whether a string is a non-negative integer (digits only, value >= 0).
+ *
+ * @param value Property value string.
+ * @returns True when `value` is a non-negative integer.
+ */
+function isNonNegativeInteger(value: string): boolean {
+    return /^\d+$/.test(value);
 }
 
 /**
@@ -180,6 +191,14 @@ export class IcebergParquetTable extends TableTypeBase {
         'history.expire.min-snapshots-to-keep',
         'history.expire.max-ref-age-ms',
         'write.metadata.previous-versions-max',
+        'commit.retry.min-wait-ms',
+        'commit.retry.max-wait-ms',
+        'commit.retry.total-timeout-ms',
+    ];
+
+    /// Table-property keys whose value must be a non-negative integer.
+    private static readonly NON_NEGATIVE_INT_PROPERTIES: readonly string[] = [
+        'commit.retry.num-retries',
     ];
 
     /// Table-property keys whose value must be an integer within an inclusive range.
@@ -212,6 +231,7 @@ export class IcebergParquetTable extends TableTypeBase {
             ...this.formatVersionViolations(),
             ...this.tablePropertyViolations(),
             ...this.sortOrderViolations(),
+            ...this.identifierFieldViolations(),
         ];
     }
 
@@ -343,18 +363,20 @@ export class IcebergParquetTable extends TableTypeBase {
      * Validate the closed-domain Iceberg table properties. Keys outside the
      * known set pass through unvalidated.
      *
-     * Emits `ICEBERG_PROPERTY_ENUM_VALID`, `ICEBERG_PROPERTY_POSITIVE_INT`, and
-     * `ICEBERG_PROPERTY_INT_RANGE`.
+     * Emits `ICEBERG_PROPERTY_ENUM_VALID`, `ICEBERG_PROPERTY_POSITIVE_INT`,
+     * `ICEBERG_PROPERTY_NON_NEGATIVE_INT`, `ICEBERG_PROPERTY_INT_RANGE`, and
+     * `ICEBERG_COMMIT_RETRY_ORDERING`.
      *
      * @returns Every table-property violation.
      */
     private tablePropertyViolations(): Violation[] {
         const violations: Violation[] = [];
+        const properties = this.definition.tableProperties;
 
         for (const [
             key,
             value,
-        ] of Object.entries(this.definition.tableProperties)) {
+        ] of Object.entries(properties)) {
             const allowed = IcebergParquetTable.ENUM_PROPERTIES[key];
             if (allowed !== undefined && !allowed.includes(value)) {
                 violations.push(this.violation({
@@ -374,6 +396,15 @@ export class IcebergParquetTable extends TableTypeBase {
                 }));
             }
 
+            if (IcebergParquetTable.NON_NEGATIVE_INT_PROPERTIES.includes(key) && !isNonNegativeInteger(value)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_PROPERTY_NON_NEGATIVE_INT',
+                    field: `tableProperties["${key}"]`,
+                    message: `table property "${key}" value "${value}" must be a non-negative integer`,
+                }));
+            }
+
             const range = IcebergParquetTable.INT_RANGE_PROPERTIES[key];
             if (range !== undefined && !isIntegerInRange(value, range.min, range.max)) {
                 violations.push(this.violation({
@@ -385,6 +416,101 @@ export class IcebergParquetTable extends TableTypeBase {
                 }));
             }
         }
+
+        violations.push(...this.commitRetryOrderingViolations(properties));
+
+        return violations;
+    }
+
+    /// ICEBERG_COMMIT_RETRY_ORDERING — commit.retry waits obey
+    /// min-wait-ms <= max-wait-ms <= total-timeout-ms when all are positive ints.
+    private commitRetryOrderingViolations(properties: Record<string, string>): Violation[] {
+        const values = [
+            properties['commit.retry.min-wait-ms'],
+            properties['commit.retry.max-wait-ms'],
+            properties['commit.retry.total-timeout-ms'],
+        ];
+        if (!values.every((value) => value !== undefined && isPositiveInteger(value))) {
+            return [];
+        }
+        const [
+            min,
+            max,
+            total,
+        ] = values.map(Number);
+        if (min <= max && max <= total) {
+            return [];
+        }
+        return [
+            this.violation({
+                level: 'error',
+                code: 'ICEBERG_COMMIT_RETRY_ORDERING',
+                field: 'tableProperties["commit.retry.min-wait-ms"]',
+                message: 'commit.retry waits must satisfy min-wait-ms <= max-wait-ms <= total-timeout-ms',
+            }),
+        ];
+    }
+
+    /**
+     * Validate Iceberg identifier fields (the row-identity / equality-delete
+     * key). Equality deletes are a format-version 2+ feature, and identifier
+     * fields must be required primitive columns that are not float/double.
+     *
+     * Emits `ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2`, `ICEBERG_IDENTIFIER_COLUMN_EXISTS`,
+     * `ICEBERG_IDENTIFIER_REQUIRED`, and `ICEBERG_IDENTIFIER_TYPE_PRIMITIVE`.
+     *
+     * @returns Every identifier-field violation.
+     */
+    private identifierFieldViolations(): Violation[] {
+        const violations: Violation[] = [];
+        const {
+            identifierFields,
+            formatVersion,
+        } = this.definition;
+
+        if (identifierFields.length === 0) {
+            return [];
+        }
+
+        if (formatVersion === 1) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2',
+                field: 'identifierFields',
+                message: 'identifier fields require formatVersion 2 or higher (equality deletes are a v2 feature)',
+            }));
+        }
+
+        identifierFields.forEach((name, index) => {
+            const field = `identifierFields[${index}]`;
+            const column = this.definition.columns.find((candidate) => candidate.name === name);
+            if (column === undefined) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_IDENTIFIER_COLUMN_EXISTS',
+                    field,
+                    message: `identifier field "${name}" is not defined in columns`,
+                }));
+                return;
+            }
+            if (column.nullable === true) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_IDENTIFIER_REQUIRED',
+                    field,
+                    message: `identifier field "${name}" must be required (nullable: false)`,
+                }));
+            }
+            const type = parseIcebergType(column.type);
+            if (type === null || type.kind === IcebergTypeKind.FLOAT || type.kind === IcebergTypeKind.DOUBLE) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_IDENTIFIER_TYPE_PRIMITIVE',
+                    field,
+                    message: `identifier field "${name}" must be a primitive type other than float or double`,
+                }));
+            }
+        });
 
         return violations;
     }

@@ -133,6 +133,9 @@
             "description": "Always-null partition (spec-evolution placeholder) on the user id."
         }
     ],
+    "identifierFields": [
+        "event_id"
+    ],
     "tableProperties": {
         "write.format.default": "parquet",
         "write.parquet.compression-codec": "zstd",
@@ -140,6 +143,10 @@
         "write.distribution-mode": "hash",
         "write.target-file-size-bytes": "536870912",
         "history.expire.max-snapshot-age-ms": "604800000",
-        "history.expire.min-snapshots-to-keep": "5"
+        "history.expire.min-snapshots-to-keep": "5",
+        "commit.retry.num-retries": "4",
+        "commit.retry.min-wait-ms": "100",
+        "commit.retry.max-wait-ms": "60000",
+        "commit.retry.total-timeout-ms": "1800000"
     }
 }
