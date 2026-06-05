@@ -229,6 +229,42 @@ export abstract class TableTypeBase {
         return violations;
     }
 
+    /// PK_COLUMN_NOT_NULLABLE / FK_NULLABILITY_CONSISTENT — per-column
+    /// nullability contradictions against the primary key and foreign keys.
+    private nullabilityViolations(): Violation[] {
+        const violations: Violation[] = [];
+
+        /// A primary-key column is implicitly NOT NULL, so declaring it nullable
+        /// is a contradiction.
+        for (const pkColumn of this.definition.primaryKey) {
+            const column = this.definition.columns.find((candidate) => candidate.name === pkColumn);
+            if (column !== undefined && column.nullable === true) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'PK_COLUMN_NOT_NULLABLE',
+                    field: 'primaryKey',
+                    message: `primary-key column "${pkColumn}" cannot be nullable (declared nullable: true)`,
+                }));
+            }
+        }
+
+        /// A NOT NULL local column can never be null, so a foreign key that
+        /// permits nulls on it is inconsistent.
+        this.definition.foreignKeys.forEach((fk, index) => {
+            const column = this.definition.columns.find((candidate) => candidate.name === fk.localColumn);
+            if (column !== undefined && column.nullable === false && fk.allowNulls) {
+                violations.push(this.violation({
+                    level: 'warning',
+                    code: 'FK_NULLABILITY_CONSISTENT',
+                    field: `foreignKeys[${index}].allowNulls`,
+                    message: `foreign key allows nulls but local column "${fk.localColumn}" is declared non-nullable`,
+                }));
+            }
+        });
+
+        return violations;
+    }
+
     /**
      * All intra-table violations for this table (engine-agnostic rules plus
      * the engine-specific partition rules).
@@ -242,6 +278,7 @@ export abstract class TableTypeBase {
             ...this.columnTypeViolations(),
             ...this.partitionViolations(),
             ...this.rawConsistencyViolations(),
+            ...this.nullabilityViolations(),
         ];
     }
 

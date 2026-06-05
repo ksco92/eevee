@@ -76,11 +76,22 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `description` | yes | Non-empty. |
 | `tableType` | yes | `hive_parquet` \| `iceberg_parquet` \| `postgres_18`. |
 | `isRawData` | yes | `true` marks the top of the pipeline. |
-| `columns` | yes | Non-empty; each has `name`, `type`, `description`. `type` validated per engine. |
+| `columns` | yes | Non-empty; each has `name`, `type`, `description`, and an optional `nullable`. `type` validated per engine. |
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
 | `partitions` | no | Engine-specific semantics (see below). |
 | `dependsOn` | conditionally | Required & non-empty when `isRawData` is `false`. Entries are `schema.table`. |
 | `foreignKeys` | no | Each: `sourceTable` (`schema.table`), `sourceColumn`, `localColumn`, `allowNulls`. |
+
+### Column nullability
+
+Each column may carry an optional `nullable` boolean. It is engine-agnostic: `false` marks a NOT NULL
+column (the Iceberg `required` flag), `true` marks an explicitly nullable column. When omitted,
+nullability is unspecified and the cross-checks below do not fire.
+
+- **`PK_COLUMN_NOT_NULLABLE`** (error) — a primary-key column declared `nullable: true` is a
+  contradiction; primary-key columns are implicitly NOT NULL.
+- **`FK_NULLABILITY_CONSISTENT`** (warning) — a foreign key with `allowNulls: true` whose local column
+  is declared `nullable: false` is inconsistent; a NOT NULL column can never be null.
 
 ### Partitions per engine
 

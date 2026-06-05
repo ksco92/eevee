@@ -58,6 +58,10 @@ function asBoolean(value: unknown): boolean {
     return typeof value === 'boolean' ? value : false;
 }
 
+function asOptionalBoolean(value: unknown): boolean | undefined {
+    return typeof value === 'boolean' ? value : undefined;
+}
+
 function asStringArray(value: unknown): string[] {
     return asArray(value).filter((item): item is string => typeof item === 'string');
 }
@@ -69,6 +73,7 @@ function normalizeColumns(value: unknown): Column[] {
             name: asString(record.name),
             type: asString(record.type),
             description: asString(record.description),
+            nullable: asOptionalBoolean(record.nullable),
         };
     });
 }
