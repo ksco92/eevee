@@ -8,8 +8,8 @@
  */
 
 import {
-    World, 
-} from '../model';
+    World,
+} from '../world';
 
 /** Escape a string for use inside a double-quoted DOT identifier or label. */
 function escapeDot(value: string): string {

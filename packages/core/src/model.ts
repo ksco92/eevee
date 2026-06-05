@@ -1,9 +1,11 @@
 /**
  * Core data model for the Flexible Dataset Definition (FDD) standard.
  *
- * These interfaces describe the *loaded* shape of a dataset root: schemas,
- * tables, and the violations the validator emits. Raw on-disk JSON is parsed
- * and normalized into these types by the loader before any semantic rule runs.
+ * These interfaces describe the *pure data* shape of a dataset: columns,
+ * partitions, foreign keys, table definitions, and the violations the
+ * validator emits. The loaded world (schemas + table instances) and the
+ * abstract table base class live in `./world` and `./table-type` so this
+ * module stays a leaf with no behavior.
  */
 
 /** Table engine. Each value unlocks engine-specific semantic checks. */
@@ -100,54 +102,6 @@ export interface SchemaDescription {
 
     /** Human description. */
     readonly description: string;
-}
-
-/** A table loaded from disk, with its identity and location. */
-export interface LoadedTable {
-    /** Owning schema name (the folder name). */
-    readonly schema: string;
-
-    /** Table name (the file name without `.json`). */
-    readonly name: string;
-
-    /** `schema.table` identifier. */
-    readonly qualifiedName: string;
-
-    /** Absolute path to the source file. */
-    readonly filePath: string;
-
-    /** Whether the file passed Layer 1 structural validation. */
-    readonly structurallyValid: boolean;
-
-    /** Normalized definition. */
-    readonly definition: TableDefinition;
-}
-
-/** A schema loaded from disk. */
-export interface LoadedSchema {
-    /** Schema name (the folder name). */
-    readonly name: string;
-
-    /** Absolute path to the schema folder. */
-    readonly dirPath: string;
-
-    /** Description from `<schema>.json`, or null if that file is missing. */
-    readonly description: SchemaDescription | null;
-
-    /** Tables in this schema. */
-    readonly tables: LoadedTable[];
-}
-
-/** The whole loaded dataset root. */
-export interface World {
-    /** Absolute path to the root. */
-    readonly rootDir: string;
-
-    /** Schemas keyed by name. */
-    readonly schemas: Map<string, LoadedSchema>;
-
-    /** Tables keyed by `schema.table`. */
-    readonly tables: Map<string, LoadedTable>;
 }
 
 /** Severity of a violation. */

@@ -4,14 +4,14 @@
  */
 
 import {
-    ValidationResult, 
+    ValidationResult,
 } from './model';
 import {
-    loadRoot, 
+    loadRoot,
 } from './loader';
 import {
-    runSemanticRules, 
-} from './rules';
+    runSemanticRules,
+} from './world';
 
 /**
  * Validate a dataset root.

@@ -5,12 +5,19 @@
 import {
     Column,
     ForeignKey,
-    LoadedSchema,
-    LoadedTable,
     Partition,
     Violation,
-    World,
 } from '../src/model';
+import {
+    TableTypeBase,
+} from '../src/table-type';
+import {
+    createTableType,
+} from '../src/table-types/registry';
+import {
+    LoadedSchema,
+    World,
+} from '../src/world';
 
 /** Convenience column factory. */
 export function col(name: string, type: string): Column {
@@ -44,11 +51,11 @@ export interface TableInput {
     structurallyValid?: boolean;
 }
 
-/** Build a `LoadedTable` with sensible defaults. */
-export function makeTable(input: TableInput): LoadedTable {
+/** Build a concrete `TableTypeBase` with sensible defaults. */
+export function makeTable(input: TableInput): TableTypeBase {
     const schema = input.schema ?? 'analytics';
     const name = input.name;
-    return {
+    return createTableType({
         schema,
         name,
         qualifiedName: `${schema}.${name}`,
@@ -65,12 +72,12 @@ export function makeTable(input: TableInput): LoadedTable {
             dependsOn: input.dependsOn ?? [],
             foreignKeys: input.foreignKeys ?? [],
         },
-    };
+    });
 }
 
 /** Build a `World` from a list of tables, grouping them into schemas. */
-export function makeWorld(tables: LoadedTable[]): World {
-    const tableMap = new Map<string, LoadedTable>();
+export function makeWorld(tables: TableTypeBase[]): World {
+    const tableMap = new Map<string, TableTypeBase>();
     const schemaMap = new Map<string, LoadedSchema>();
     for (const table of tables) {
         tableMap.set(table.qualifiedName, table);
