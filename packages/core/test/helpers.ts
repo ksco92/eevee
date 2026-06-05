@@ -5,6 +5,7 @@
 import {
     Column,
     ForeignKey,
+    LoadedSchema,
     LoadedTable,
     Partition,
     Violation,
@@ -67,15 +68,30 @@ export function makeTable(input: TableInput): LoadedTable {
     };
 }
 
-/** Build a `World` from a list of tables. */
+/** Build a `World` from a list of tables, grouping them into schemas. */
 export function makeWorld(tables: LoadedTable[]): World {
     const tableMap = new Map<string, LoadedTable>();
+    const schemaMap = new Map<string, LoadedSchema>();
     for (const table of tables) {
         tableMap.set(table.qualifiedName, table);
+        let schema = schemaMap.get(table.schema);
+        if (!schema) {
+            schema = {
+                name: table.schema,
+                dirPath: `/virtual/${table.schema}`,
+                description: {
+                    specVersion: '0',
+                    description: `schema ${table.schema}`,
+                },
+                tables: [],
+            };
+            schemaMap.set(table.schema, schema);
+        }
+        schema.tables.push(table);
     }
     return {
         rootDir: '/virtual',
-        schemas: new Map(),
+        schemas: schemaMap,
         tables: tableMap,
     };
 }

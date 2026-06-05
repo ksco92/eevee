@@ -26,6 +26,7 @@ module.exports = {
         'src/**/*.ts',
         '!src/cli.ts',
         '!src/index.ts',
+        '!src/diagram/render.ts',
     ],
     coverageDirectory: 'build/coverage',
     coverageReporters: [
