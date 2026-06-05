@@ -94,14 +94,16 @@ nullability is unspecified and the cross-checks below do not fire.
 - **`FK_NULLABILITY_CONSISTENT`** (warning) — a foreign key with `allowNulls: true` whose local column
   is declared `nullable: false` is inconsistent; a NOT NULL column can never be null.
 
+### Format version (Iceberg)
+
+An Iceberg table may declare a `formatVersion` of `1`, `2`, or `3`
+(**`ICEBERG_FORMAT_VERSION_VALID`**, error, when out of range). It is optional and engine-specific;
+non-Iceberg engines ignore the field.
+
 ### Partitions per engine
 
 - **`hive_parquet`** — each partition is a **new** partition column: `name` must NOT be a data column,
   `type` is a normal Hive type (no transforms).
-An Iceberg table may also declare a `formatVersion` of `1`, `2`, or `3`
-(**`ICEBERG_FORMAT_VERSION_VALID`**, error, when out of range). It is optional and engine-specific;
-non-Iceberg engines ignore the field.
-
 - **`iceberg_parquet`** — each partition derives from a data column: `name` is the **source column**
   (must exist in `columns`), `type` is an Iceberg **transform**
   (`identity`, `year`, `month`, `day`, `hour`, `void`, `bucket[N]`, `truncate[W]`). The transform must
