@@ -40,6 +40,18 @@ export interface Column {
      * column.
      */
     readonly nullable?: boolean;
+
+    /**
+     * Generated-column kind (Postgres): `stored` or `virtual`. Optional; when
+     * set, the column is computed from `expressionColumns`.
+     */
+    readonly generated?: string;
+
+    /** Opaque generation expression (Postgres generated column). */
+    readonly expression?: string;
+
+    /** Columns the generation `expression` references (Postgres). */
+    readonly expressionColumns?: string[];
 }
 
 /**

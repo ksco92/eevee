@@ -49,6 +49,11 @@ test('loads the example root cleanly', () => {
     expect(customers?.definition.checkConstraints[0].columns).toEqual([
         'lifetime_value',
     ]);
+    const generatedColumn = customers?.definition.columns.find((column) => column.name === 'lifetime_value_cents');
+    expect(generatedColumn?.generated).toBe('stored');
+    expect(generatedColumn?.expressionColumns).toEqual([
+        'lifetime_value',
+    ]);
 });
 
 test('reports a JSON parse error', () => {

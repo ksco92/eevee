@@ -86,6 +86,9 @@ function normalizeColumns(value: unknown): Column[] {
             type: asString(record.type),
             description: asString(record.description),
             nullable: asOptionalBoolean(record.nullable),
+            generated: asOptionalString(record.generated),
+            expression: asOptionalString(record.expression),
+            expressionColumns: 'expressionColumns' in record ? asStringArray(record.expressionColumns) : undefined,
         };
     });
 }

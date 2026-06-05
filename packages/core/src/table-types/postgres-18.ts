@@ -46,6 +46,11 @@ const INDEX_NULLS: ReadonlySet<string> = new Set([
     'last',
 ]);
 
+const GENERATED_KINDS: ReadonlySet<string> = new Set([
+    'stored',
+    'virtual',
+]);
+
 /** Postgres 18 table. */
 export class Postgres18Table extends TableTypeBase {
     /**
@@ -142,7 +147,95 @@ export class Postgres18Table extends TableTypeBase {
             ...this.indexViolations(),
             ...this.uniqueConstraintViolations(),
             ...this.checkConstraintViolations(),
+            ...this.generatedColumnViolations(),
         ];
+    }
+
+    /**
+     * Validate generated columns.
+     *
+     * Emits `POSTGRES_GENERATED_KIND_VALID`,
+     * `POSTGRES_GENERATED_EXPRESSION_COLUMN_EXISTS`,
+     * `POSTGRES_GENERATED_NO_SELF_REFERENCE`,
+     * `POSTGRES_GENERATED_NO_GENERATED_REFERENCE`,
+     * `POSTGRES_GENERATED_NOT_IN_PARTITION_KEY`, and
+     * `POSTGRES_VIRTUAL_GENERATED_NOT_IN_PK`.
+     *
+     * @returns Every generated-column violation.
+     */
+    private generatedColumnViolations(): Violation[] {
+        const violations: Violation[] = [];
+
+        const generatedNames = new Set(
+            this.definition.columns
+                .filter((column) => column.generated !== undefined)
+                .map((column) => column.name),
+        );
+        const partitionNames = new Set(this.definition.partitions.map((partition) => partition.name));
+
+        this.definition.columns.forEach((column, index) => {
+            if (column.generated === undefined) {
+                return;
+            }
+            const field = `columns[${index}]`;
+
+            if (!GENERATED_KINDS.has(column.generated)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_GENERATED_KIND_VALID',
+                    field: `${field}.generated`,
+                    message: `generated kind "${column.generated}" must be "stored" or "virtual"`,
+                }));
+            }
+
+            (column.expressionColumns ?? []).forEach((reference, referenceIndex) => {
+                const referenceField = `${field}.expressionColumns[${referenceIndex}]`;
+                if (reference === column.name) {
+                    violations.push(this.violation({
+                        level: 'error',
+                        code: 'POSTGRES_GENERATED_NO_SELF_REFERENCE',
+                        field: referenceField,
+                        message: `generated column "${column.name}" cannot reference itself`,
+                    }));
+                } else if (!this.hasColumn(reference)) {
+                    violations.push(this.violation({
+                        level: 'error',
+                        code: 'POSTGRES_GENERATED_EXPRESSION_COLUMN_EXISTS',
+                        field: referenceField,
+                        message: `generated column "${column.name}" references "${reference}", `
+                            + 'which is not defined in columns',
+                    }));
+                } else if (generatedNames.has(reference)) {
+                    violations.push(this.violation({
+                        level: 'error',
+                        code: 'POSTGRES_GENERATED_NO_GENERATED_REFERENCE',
+                        field: referenceField,
+                        message: `generated column "${column.name}" cannot reference `
+                            + `generated column "${reference}"`,
+                    }));
+                }
+            });
+
+            if (partitionNames.has(column.name)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_GENERATED_NOT_IN_PARTITION_KEY',
+                    field: `${field}.generated`,
+                    message: `generated column "${column.name}" cannot be a partition key`,
+                }));
+            }
+
+            if (column.generated === 'virtual' && this.definition.primaryKey.includes(column.name)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_VIRTUAL_GENERATED_NOT_IN_PK',
+                    field: `${field}.generated`,
+                    message: `virtual generated column "${column.name}" cannot be part of the primary key`,
+                }));
+            }
+        });
+
+        return violations;
     }
 
     /**
