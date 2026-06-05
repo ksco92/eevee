@@ -103,6 +103,14 @@ export interface TableDefinition {
     /** Partition entries (engine-specific semantics). */
     readonly partitions: Partition[];
 
+    /**
+     * Engine table properties as a string→string map (e.g. Iceberg
+     * `write.target-file-size-bytes`, Hive `parquet.compression`). Optional.
+     * Only keys with a known, closed legal domain are validated per engine;
+     * unknown keys pass through unvalidated.
+     */
+    readonly tableProperties: Record<string, string>;
+
     /** Upstream tables in `schema.table` format. */
     readonly dependsOn: string[];
 

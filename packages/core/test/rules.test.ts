@@ -559,6 +559,102 @@ test('format version is ignored for non-Iceberg engines', () => {
     expect(codes(runSemanticRules(world))).not.toContain('ICEBERG_FORMAT_VERSION_VALID');
 });
 
+/// Iceberg table properties
+
+function icebergWithProps(tableProperties: Record<string, string>) {
+    return makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            tableProperties,
+            columns: [
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+}
+
+test('ICEBERG_PROPERTY_ENUM_VALID fires on an unknown compression codec', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'write.parquet.compression-codec': 'brotli',
+    })));
+    expect(result).toContain('ICEBERG_PROPERTY_ENUM_VALID');
+});
+
+test('ICEBERG_PROPERTY_ENUM_VALID passes on a supported compression codec', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'write.parquet.compression-codec': 'zstd',
+    })));
+    expect(result).not.toContain('ICEBERG_PROPERTY_ENUM_VALID');
+});
+
+test('ICEBERG_PROPERTY_POSITIVE_INT fires on a zero snapshot age', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'history.expire.max-snapshot-age-ms': '0',
+    })));
+    expect(result).toContain('ICEBERG_PROPERTY_POSITIVE_INT');
+});
+
+test('ICEBERG_PROPERTY_POSITIVE_INT fires on a non-numeric value', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'write.target-file-size-bytes': 'big',
+    })));
+    expect(result).toContain('ICEBERG_PROPERTY_POSITIVE_INT');
+});
+
+test('ICEBERG_PROPERTY_POSITIVE_INT passes on a positive integer', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'write.target-file-size-bytes': '536870912',
+    })));
+    expect(result).not.toContain('ICEBERG_PROPERTY_POSITIVE_INT');
+});
+
+test('ICEBERG_PROPERTY_INT_RANGE fires on an out-of-range compression level', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'write.parquet.compression-level': '30',
+    })));
+    expect(result).toContain('ICEBERG_PROPERTY_INT_RANGE');
+});
+
+test('ICEBERG_PROPERTY_INT_RANGE fires on a non-numeric compression level', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'write.parquet.compression-level': 'high',
+    })));
+    expect(result).toContain('ICEBERG_PROPERTY_INT_RANGE');
+});
+
+test('ICEBERG_PROPERTY_INT_RANGE passes on an in-range compression level', () => {
+    const result = codes(runSemanticRules(icebergWithProps({
+        'write.parquet.compression-level': '6',
+    })));
+    expect(result).not.toContain('ICEBERG_PROPERTY_INT_RANGE');
+});
+
+test('unknown Iceberg table properties pass through unvalidated', () => {
+    const result = runSemanticRules(icebergWithProps({
+        'my.custom.key': 'whatever',
+        'read.split.target-size': '134217728',
+    }));
+    expect(result).toHaveLength(0);
+});
+
+test('a fully valid Iceberg table-property set produces no violations', () => {
+    const result = runSemanticRules(icebergWithProps({
+        'write.format.default': 'parquet',
+        'write.parquet.compression-codec': 'zstd',
+        'write.parquet.compression-level': '9',
+        'write.distribution-mode': 'hash',
+        'write.target-file-size-bytes': '536870912',
+        'history.expire.max-snapshot-age-ms': '604800000',
+        'history.expire.min-snapshots-to-keep': '3',
+        'write.metadata.compression-codec': 'gzip',
+    }));
+    expect(result).toHaveLength(0);
+});
+
 /// Raw consistency
 
 test('RAW_NO_DEPENDS_ON fires when a raw table declares dependsOn', () => {

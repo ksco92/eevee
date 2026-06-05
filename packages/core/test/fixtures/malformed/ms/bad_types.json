@@ -16,6 +16,10 @@
         "a"
     ],
     "partitions": "nope",
+    "tableProperties": {
+        "good.key": "ok",
+        "bad.key": 5
+    },
     "dependsOn": [
         2,
         "x.y"

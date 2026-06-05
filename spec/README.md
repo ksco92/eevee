@@ -100,6 +100,25 @@ An Iceberg table may declare a `formatVersion` of `1`, `2`, or `3`
 (**`ICEBERG_FORMAT_VERSION_VALID`**, error, when out of range). It is optional and engine-specific;
 non-Iceberg engines ignore the field.
 
+### Table properties
+
+`tableProperties` is an optional string→string map of engine settings. Only keys with a known, closed
+legal domain are validated; unknown keys pass through untouched, so engine-specific tuning is never
+blocked. Values are strings (matching how engines store them).
+
+For `iceberg_parquet` the validated keys are:
+
+- **Enums** (**`ICEBERG_PROPERTY_ENUM_VALID`**, error) — `write.format.default`
+  (`parquet`/`avro`/`orc`), `write.parquet.compression-codec` (`zstd`/`gzip`/`snappy`/`lz4`/`none`),
+  `write.avro.compression-codec` (`gzip`/`zstd`/`snappy`/`uncompressed`), `write.orc.compression-codec`
+  (`zstd`/`lz4`/`lzo`/`zlib`/`snappy`/`none`), `write.distribution-mode` (`none`/`hash`/`range`),
+  `write.metadata.compression-codec` (`none`/`gzip`).
+- **Positive integers** (**`ICEBERG_PROPERTY_POSITIVE_INT`**, error) — `write.target-file-size-bytes`
+  (compaction target), `history.expire.max-snapshot-age-ms`, `history.expire.min-snapshots-to-keep`,
+  `history.expire.max-ref-age-ms` (snapshot retention), `write.metadata.previous-versions-max`.
+- **Bounded integer** (**`ICEBERG_PROPERTY_INT_RANGE`**, error) — `write.parquet.compression-level`
+  (1–22).
+
 ### Partitions per engine
 
 - **`hive_parquet`** — each partition is a **new** partition column: `name` must NOT be a data column,
