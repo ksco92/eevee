@@ -3,7 +3,6 @@
  */
 
 import {
-    isValidColumnType,
     isValidHiveType,
     isValidPostgresType,
 } from '../src/types';
@@ -60,13 +59,4 @@ test('postgres rejects bad parameters and unknown types', () => {
     expect(isValidPostgresType('integer(3)')).toBe(false);
     expect(isValidPostgresType('varchar(abc)')).toBe(false);
     expect(isValidPostgresType('nope')).toBe(false);
-});
-
-/// Dispatch
-
-test('isValidColumnType dispatches per engine', () => {
-    expect(isValidColumnType('iceberg_parquet', 'long')).toBe(true);
-    expect(isValidColumnType('hive_parquet', 'string')).toBe(true);
-    expect(isValidColumnType('postgres_18', 'integer')).toBe(true);
-    expect(isValidColumnType('unknown_engine', 'integer')).toBe(false);
 });

@@ -3,8 +3,8 @@
  */
 
 import {
-    runSemanticRules, 
-} from '../src/rules';
+    runSemanticRules,
+} from '../src/world';
 import {
     codes,
     col,

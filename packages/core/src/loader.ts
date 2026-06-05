@@ -1,10 +1,11 @@
 /**
  * Filesystem loader. Walks a dataset root, parses each JSON file, runs Layer 1
- * structural validation, and normalizes everything into a `World` the semantic
- * rules operate on.
+ * structural validation, and normalizes everything into a `World` of
+ * concrete `TableTypeBase` instances that the semantic rules operate on.
  *
  * Parse errors, structural errors, and a missing schema-description file are
- * reported here; all cross-field / cross-file logic lives in `rules.ts`.
+ * reported here; all cross-field / cross-file logic lives in the table-type
+ * classes (`./table-type.ts`, `./table-types/*`).
  */
 
 import * as fs from 'fs';
@@ -13,17 +14,24 @@ import * as path from 'path';
 import {
     Column,
     ForeignKey,
-    LoadedSchema,
-    LoadedTable,
     Partition,
     SchemaDescription,
     TableDefinition,
     Violation,
-    World,
 } from './model';
 import {
-    validateStructure, 
+    validateStructure,
 } from './structural';
+import {
+    TableTypeBase,
+} from './table-type';
+import {
+    createTableType,
+} from './table-types/registry';
+import {
+    LoadedSchema,
+    World,
+} from './world';
 
 /** Result of loading a root: the model plus any load-time violations. */
 export interface LoadOutcome {
@@ -130,7 +138,7 @@ export function loadRoot(rootDir: string): LoadOutcome {
 
     const violations: Violation[] = [];
     const schemas = new Map<string, LoadedSchema>();
-    const tables = new Map<string, LoadedTable>();
+    const tables = new Map<string, TableTypeBase>();
 
     const schemaDirs = fs.readdirSync(absoluteRoot, {
         withFileTypes: true,
@@ -157,7 +165,7 @@ export function loadRoot(rootDir: string): LoadOutcome {
             .sort((a, b) => a.localeCompare(b));
 
         let description: SchemaDescription | null = null;
-        const loadedTables: LoadedTable[] = [];
+        const loadedTables: TableTypeBase[] = [];
 
         for (const file of jsonFiles) {
             const filePath = path.join(dirPath, file);
@@ -220,14 +228,14 @@ export function loadRoot(rootDir: string): LoadOutcome {
                 });
             }
 
-            const loadedTable: LoadedTable = {
+            const loadedTable = createTableType({
                 schema: schemaName,
                 name: tableName,
                 qualifiedName,
                 filePath,
                 structurallyValid: structural.valid,
                 definition: normalizeTableDefinition(parsed),
-            };
+            });
             loadedTables.push(loadedTable);
             tables.set(qualifiedName, loadedTable);
         }

@@ -8,8 +8,8 @@
  */
 
 import {
-    World, 
-} from '../model';
+    World,
+} from '../world';
 
 /** Escape text for inclusion in a Graphviz HTML-like label. */
 function htmlEscape(value: string): string {

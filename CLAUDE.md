@@ -108,6 +108,31 @@ section of `README.md`. Automated proposals (new rules, type-registry entries,
 example or schema updates) are welcome but land only through the normal PR +
 review gates, never directly on `main`.
 
+## Adding a table type (engine)
+
+Engine behavior lives in a class hierarchy, not in scattered `switch (tableType)`
+statements:
+
+- `src/table-type.ts` — `TableTypeBase`, the abstract base. It implements the
+  engine-agnostic Layer 2 rules as concrete methods (primary-key existence,
+  duplicate columns, raw-data consistency, `dependsOn` resolution, the foreign-key
+  suite) and declares the engine-specific ones as abstract: `isValidColumnType` and
+  `partitionViolations`. Cross-file rules are instance methods that take the
+  `World` and resolve targets through `world.tables`.
+- `src/table-types/<engine>.ts` — one concrete subclass per engine implementing the
+  two abstract methods. Shared column-type parsing stays in helpers (`src/types.ts`,
+  `src/iceberg.ts`) the subclasses call.
+- `src/table-types/registry.ts` — `createTableType` + an exhaustive
+  `Record<TableType, …>`. The loader builds a `World` of these instances.
+- `src/world.ts` — the `World` shape plus `runSemanticRules` and the one rule that
+  must see the whole graph at once, `acyclicViolations` (cycle detection).
+
+To add an engine: (1) add the value to the `TableType` enum and the `tableType`
+enum in `src/schema/table.schema.json`; (2) write `src/table-types/<engine>.ts`;
+(3) register it in `registry.ts` (the exhaustive `Record` makes a missing entry a
+compile error); (4) document it in `spec/README.md`; (5) add fixtures and extend
+`examples/`. Engine-agnostic rules need no change.
+
 ## Python wrapper
 
 `packages/python` is the `flexdataset` PyPI package: a thin client that shells out to the

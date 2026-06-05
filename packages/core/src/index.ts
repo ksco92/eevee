@@ -4,6 +4,11 @@
 
 export * from './model';
 export {
+    LoadedSchema,
+    World,
+    runSemanticRules,
+} from './world';
+export {
     validateRoot,
 } from './validate';
 export {
@@ -11,10 +16,21 @@ export {
     LoadOutcome,
 } from './loader';
 export {
-    runSemanticRules,
-    RULES,
-    Rule,
-} from './rules';
+    TableTypeBase,
+    TableTypeFields,
+} from './table-type';
+export {
+    createTableType,
+} from './table-types/registry';
+export {
+    HiveParquetTable,
+} from './table-types/hive-parquet';
+export {
+    IcebergParquetTable,
+} from './table-types/iceberg-parquet';
+export {
+    Postgres18Table,
+} from './table-types/postgres-18';
 export {
     validateStructure,
     StructuralKind,
@@ -22,7 +38,6 @@ export {
     StructuralError,
 } from './structural';
 export {
-    isValidColumnType,
     isValidHiveType,
     isValidPostgresType,
 } from './types';

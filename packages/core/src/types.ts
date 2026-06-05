@@ -1,17 +1,10 @@
 /**
- * Per-engine column-type registries.
+ * Per-engine column-type registries for Hive and Postgres.
  *
- * `isValidColumnType(tableType, typeStr)` is the single entry point used by the
- * `COLUMN_TYPE_VALID` semantic rule. Iceberg delegates to the ported module in
- * `iceberg.ts`; Hive and Postgres are validated here.
+ * Each function answers "is this type string valid for this engine?". The
+ * concrete `TableTypeBase` subclasses delegate `isValidColumnType` here (and
+ * the Iceberg subclass delegates to `./iceberg`).
  */
-
-import {
-    TableType, 
-} from './model';
-import {
-    isValidIcebergType, 
-} from './iceberg';
 
 /// ////////////////////////////////////////////////////////////////////////////
 // Hive
@@ -196,27 +189,4 @@ export function isValidPostgresType(typeStr: string): boolean {
     }
 
     return POSTGRES_EXACT.has(type);
-}
-
-/// ////////////////////////////////////////////////////////////////////////////
-// Dispatch
-
-/**
- * Validate a column type for the given engine.
- *
- * @param tableType Engine of the owning table.
- * @param typeStr Column type string.
- * @returns True when the type is valid for that engine.
- */
-export function isValidColumnType(tableType: string, typeStr: string): boolean {
-    switch (tableType) {
-        case TableType.HIVE_PARQUET:
-            return isValidHiveType(typeStr);
-        case TableType.ICEBERG_PARQUET:
-            return isValidIcebergType(typeStr);
-        case TableType.POSTGRES_18:
-            return isValidPostgresType(typeStr);
-        default:
-            return false;
-    }
 }
