@@ -33,6 +33,7 @@ function emptyDefinition(): TableDefinition {
         primaryKey: [],
         partitions: [],
         sortOrder: [],
+        identifierFields: [],
         indexes: [],
         uniqueConstraints: [],
         checkConstraints: [],

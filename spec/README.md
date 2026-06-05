@@ -81,6 +81,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
 | `partitions` | no | Engine-specific semantics (see below). |
 | `sortOrder` | no | Iceberg only: ordered sort fields (`column`, optional `transform`, `direction`, `nullOrder`). Other engines ignore it. |
+| `identifierFields` | no | Iceberg only: the row-identity / equality-delete key columns. Other engines ignore them. |
 | `bucketing` | no | Hive only: `CLUSTERED BY … INTO N BUCKETS` (`columns`, `bucketCount`, optional `sortedBy`). Other engines ignore it. |
 | `indexes` | no | Postgres only: secondary indexes (`name`, `method`, optional `unique`, `columns`, `include`, `where`). Other engines ignore them. |
 | `uniqueConstraints` | no | Postgres only: table-level UNIQUE constraints (`name`, `columns`, optional `nullsNotDistinct`). Other engines ignore them. |
@@ -121,6 +122,21 @@ defaulting to identity), a `direction` (`asc` or `desc`), and a `nullOrder` (`nu
 - **`ICEBERG_SORT_TRANSFORM_TYPE_LEGAL`** (error) — the transform must be legal on the column's type.
 - **`NO_DUPLICATE_SORT_FIELDS`** (error) — the (column, transform) pair must be unique; an omitted
   transform and an explicit `identity` are the same field.
+
+The field is engine-specific; non-Iceberg engines ignore it.
+
+### Identifier fields (Iceberg)
+
+An Iceberg table may declare `identifierFields`: the columns that identify a row (the equality-delete
+key). Checks:
+
+- **`ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2`** (error) — identifier fields are an equality-delete feature, so
+  setting them with `formatVersion: 1` is invalid (an unspecified format version is allowed).
+- **`ICEBERG_IDENTIFIER_COLUMN_EXISTS`** (error) — each identifier field exists in `columns`.
+- **`ICEBERG_IDENTIFIER_REQUIRED`** (error) — an identifier field declared `nullable: true` is invalid;
+  identifier fields must be required.
+- **`ICEBERG_IDENTIFIER_TYPE_PRIMITIVE`** (error) — an identifier field must be a primitive type other
+  than `float` or `double`.
 
 The field is engine-specific; non-Iceberg engines ignore it.
 
@@ -190,7 +206,11 @@ For `iceberg_parquet` the validated keys are:
   `write.metadata.compression-codec` (`none`/`gzip`).
 - **Positive integers** (**`ICEBERG_PROPERTY_POSITIVE_INT`**, error) — `write.target-file-size-bytes`
   (compaction target), `history.expire.max-snapshot-age-ms`, `history.expire.min-snapshots-to-keep`,
-  `history.expire.max-ref-age-ms` (snapshot retention), `write.metadata.previous-versions-max`.
+  `history.expire.max-ref-age-ms` (snapshot retention), `write.metadata.previous-versions-max`,
+  `commit.retry.min-wait-ms`, `commit.retry.max-wait-ms`, `commit.retry.total-timeout-ms`.
+- **Non-negative integer** (**`ICEBERG_PROPERTY_NON_NEGATIVE_INT`**, error) — `commit.retry.num-retries`.
+- **Commit-retry ordering** (**`ICEBERG_COMMIT_RETRY_ORDERING`**, error) — when all three are positive
+  integers, `commit.retry.min-wait-ms` ≤ `commit.retry.max-wait-ms` ≤ `commit.retry.total-timeout-ms`.
 - **Bounded integer** (**`ICEBERG_PROPERTY_INT_RANGE`**, error) — `write.parquet.compression-level`
   (1–22).
 

@@ -239,6 +239,7 @@ function normalizeTableDefinition(raw: unknown): TableDefinition {
         primaryKey: asStringArray(record.primaryKey),
         partitions: normalizePartitions(record.partitions),
         sortOrder: normalizeSortOrder(record.sortOrder),
+        identifierFields: asStringArray(record.identifierFields),
         indexes: normalizeIndexes(record.indexes),
         uniqueConstraints: normalizeUniqueConstraints(record.uniqueConstraints),
         checkConstraints: normalizeCheckConstraints(record.checkConstraints),

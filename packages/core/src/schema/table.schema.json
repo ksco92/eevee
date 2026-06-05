@@ -68,6 +68,13 @@
                 "$ref": "#/definitions/sortField"
             }
         },
+        "identifierFields": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "minLength": 1
+            }
+        },
         "indexes": {
             "type": "array",
             "items": {

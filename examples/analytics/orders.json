@@ -31,6 +31,9 @@
     "primaryKey": [
         "order_id"
     ],
+    "identifierFields": [
+        "order_id"
+    ],
     "dependsOn": [
         "analytics.customers",
         "raw.events_raw"
