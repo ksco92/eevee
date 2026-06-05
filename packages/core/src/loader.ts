@@ -14,6 +14,7 @@ import * as path from 'path';
 import {
     Column,
     ForeignKey,
+    Index,
     Partition,
     SchemaDescription,
     SortField,
@@ -110,6 +111,27 @@ function normalizeSortOrder(value: unknown): SortField[] {
     });
 }
 
+function normalizeIndexes(value: unknown): Index[] {
+    return asArray(value).map((raw) => {
+        const record = asRecord(raw);
+        return {
+            name: asString(record.name),
+            method: asString(record.method),
+            unique: asOptionalBoolean(record.unique),
+            columns: asArray(record.columns).map((rawColumn) => {
+                const columnRecord = asRecord(rawColumn);
+                return {
+                    name: asString(columnRecord.name),
+                    sort: asOptionalString(columnRecord.sort),
+                    nulls: asOptionalString(columnRecord.nulls),
+                };
+            }),
+            include: asStringArray(record.include),
+            where: asOptionalString(record.where),
+        };
+    });
+}
+
 function normalizeStringMap(value: unknown): Record<string, string> {
     const record = asRecord(value);
     const result: Record<string, string> = {};
@@ -148,6 +170,7 @@ function normalizeTableDefinition(raw: unknown): TableDefinition {
         primaryKey: asStringArray(record.primaryKey),
         partitions: normalizePartitions(record.partitions),
         sortOrder: normalizeSortOrder(record.sortOrder),
+        indexes: normalizeIndexes(record.indexes),
         tableProperties: normalizeStringMap(record.tableProperties),
         dependsOn: asStringArray(record.dependsOn),
         foreignKeys: normalizeForeignKeys(record.foreignKeys),

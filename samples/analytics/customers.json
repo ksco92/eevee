@@ -146,6 +146,33 @@
             "description": "Range-partitioned by creation time (Postgres declarative partitioning)."
         }
     ],
+    "indexes": [
+        {
+            "name": "uq_customers_email",
+            "method": "btree",
+            "unique": true,
+            "columns": [
+                {
+                    "name": "email",
+                    "sort": "asc",
+                    "nulls": "last"
+                }
+            ],
+            "include": [
+                "display_name"
+            ]
+        },
+        {
+            "name": "gin_customers_prefs",
+            "method": "gin",
+            "columns": [
+                {
+                    "name": "prefs"
+                }
+            ],
+            "include": []
+        }
+    ],
     "dependsOn": [
         "raw.web_events"
     ],

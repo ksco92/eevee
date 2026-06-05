@@ -5,6 +5,7 @@
 import {
     Column,
     ForeignKey,
+    Index,
     Partition,
     SortField,
     Violation,
@@ -50,6 +51,7 @@ export interface TableInput {
     primaryKey?: string[];
     partitions?: Partition[];
     sortOrder?: SortField[];
+    indexes?: Index[];
     tableProperties?: Record<string, string>;
     dependsOn?: string[];
     foreignKeys?: ForeignKey[];
@@ -76,6 +78,7 @@ export function makeTable(input: TableInput): TableTypeBase {
             primaryKey: input.primaryKey ?? [],
             partitions: input.partitions ?? [],
             sortOrder: input.sortOrder ?? [],
+            indexes: input.indexes ?? [],
             tableProperties: input.tableProperties ?? {},
             dependsOn: input.dependsOn ?? [],
             foreignKeys: input.foreignKeys ?? [],

@@ -3,6 +3,9 @@
  */
 
 import {
+    Index,
+} from '../src/model';
+import {
     runSemanticRules,
 } from '../src/world';
 import {
@@ -557,6 +560,277 @@ test('format version is ignored for non-Iceberg engines', () => {
         }),
     ]);
     expect(codes(runSemanticRules(world))).not.toContain('ICEBERG_FORMAT_VERSION_VALID');
+});
+
+/// Postgres indexes
+
+function pgWithIndexes(indexes: Index[]) {
+    return makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            indexes,
+            columns: [
+                col('a', 'integer'),
+                col('b', 'integer'),
+                col('c', 'integer'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+}
+
+test('a valid Postgres index produces no violations', () => {
+    const result = runSemanticRules(pgWithIndexes([
+        {
+            name: 'idx_a',
+            method: 'btree',
+            unique: true,
+            columns: [
+                {
+                    name: 'a',
+                    sort: 'asc',
+                    nulls: 'last',
+                },
+            ],
+            include: [
+                'b',
+            ],
+        },
+    ]));
+    expect(result).toHaveLength(0);
+});
+
+test('POSTGRES_INDEX_NAME_UNIQUE fires on duplicate index names', () => {
+    const result = codes(runSemanticRules(pgWithIndexes([
+        {
+            name: 'dup',
+            method: 'btree',
+            columns: [
+                {
+                    name: 'a',
+                },
+            ],
+            include: [],
+        },
+        {
+            name: 'dup',
+            method: 'btree',
+            columns: [
+                {
+                    name: 'b',
+                },
+            ],
+            include: [],
+        },
+    ])));
+    expect(result).toContain('POSTGRES_INDEX_NAME_UNIQUE');
+});
+
+test('POSTGRES_INDEX_METHOD_VALID fires on an unknown method', () => {
+    const result = codes(runSemanticRules(pgWithIndexes([
+        {
+            name: 'idx',
+            method: 'rtree',
+            columns: [
+                {
+                    name: 'a',
+                },
+            ],
+            include: [],
+        },
+    ])));
+    expect(result).toContain('POSTGRES_INDEX_METHOD_VALID');
+});
+
+test('POSTGRES_INDEX_COLUMN_EXISTS fires when a key column is missing', () => {
+    const result = codes(runSemanticRules(pgWithIndexes([
+        {
+            name: 'idx',
+            method: 'btree',
+            columns: [
+                {
+                    name: 'ghost',
+                },
+            ],
+            include: [],
+        },
+    ])));
+    expect(result).toContain('POSTGRES_INDEX_COLUMN_EXISTS');
+});
+
+test('POSTGRES_INDEX_COLUMN_EXISTS fires when an include column is missing', () => {
+    const result = codes(runSemanticRules(pgWithIndexes([
+        {
+            name: 'idx',
+            method: 'btree',
+            columns: [
+                {
+                    name: 'a',
+                },
+            ],
+            include: [
+                'ghost',
+            ],
+        },
+    ])));
+    expect(result).toContain('POSTGRES_INDEX_COLUMN_EXISTS');
+});
+
+test('POSTGRES_INDEX_NO_DUPLICATE_COLUMNS fires on a repeated key column', () => {
+    const result = codes(runSemanticRules(pgWithIndexes([
+        {
+            name: 'idx',
+            method: 'btree',
+            columns: [
+                {
+                    name: 'a',
+                },
+                {
+                    name: 'a',
+                },
+            ],
+            include: [],
+        },
+    ])));
+    expect(result).toContain('POSTGRES_INDEX_NO_DUPLICATE_COLUMNS');
+});
+
+test('POSTGRES_INDEX_NO_DUPLICATE_COLUMNS fires on a repeated include column', () => {
+    const result = codes(runSemanticRules(pgWithIndexes([
+        {
+            name: 'idx',
+            method: 'btree',
+            columns: [
+                {
+                    name: 'a',
+                },
+            ],
+            include: [
+                'b',
+                'b',
+            ],
+        },
+    ])));
+    expect(result).toContain('POSTGRES_INDEX_NO_DUPLICATE_COLUMNS');
+});
+
+test('POSTGRES_INDEX_NO_DUPLICATE_COLUMNS fires when an include column is also a key column', () => {
+    const result = codes(runSemanticRules(pgWithIndexes([
+        {
+            name: 'idx',
+            method: 'btree',
+            columns: [
+                {
+                    name: 'a',
+                },
+            ],
+            include: [
+                'a',
+            ],
+        },
+    ])));
+    expect(result).toContain('POSTGRES_INDEX_NO_DUPLICATE_COLUMNS');
+});
+
+test('POSTGRES_INDEX_UNIQUE_BTREE_ONLY fires on a unique non-btree index', () => {
+    const result = codes(runSemanticRules(pgWithIndexes([
+        {
+            name: 'idx',
+            method: 'gin',
+            unique: true,
+            columns: [
+                {
+                    name: 'a',
+                },
+            ],
+            include: [],
+        },
+    ])));
+    expect(result).toContain('POSTGRES_INDEX_UNIQUE_BTREE_ONLY');
+});
+
+test('a unique btree index does not trigger POSTGRES_INDEX_UNIQUE_BTREE_ONLY', () => {
+    const result = codes(runSemanticRules(pgWithIndexes([
+        {
+            name: 'idx',
+            method: 'btree',
+            unique: true,
+            columns: [
+                {
+                    name: 'a',
+                },
+            ],
+            include: [],
+        },
+    ])));
+    expect(result).not.toContain('POSTGRES_INDEX_UNIQUE_BTREE_ONLY');
+});
+
+test('POSTGRES_INDEX_SORT_VALID fires on an unknown sort', () => {
+    const result = codes(runSemanticRules(pgWithIndexes([
+        {
+            name: 'idx',
+            method: 'btree',
+            columns: [
+                {
+                    name: 'a',
+                    sort: 'ascending',
+                },
+            ],
+            include: [],
+        },
+    ])));
+    expect(result).toContain('POSTGRES_INDEX_SORT_VALID');
+});
+
+test('POSTGRES_INDEX_NULLS_VALID fires on an unknown nulls option', () => {
+    const result = codes(runSemanticRules(pgWithIndexes([
+        {
+            name: 'idx',
+            method: 'btree',
+            columns: [
+                {
+                    name: 'a',
+                    nulls: 'top',
+                },
+            ],
+            include: [],
+        },
+    ])));
+    expect(result).toContain('POSTGRES_INDEX_NULLS_VALID');
+});
+
+test('indexes are ignored for non-Postgres engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            indexes: [
+                {
+                    name: 'idx',
+                    method: 'rtree',
+                    columns: [
+                        {
+                            name: 'ghost',
+                        },
+                    ],
+                    include: [],
+                },
+            ],
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('POSTGRES_INDEX_METHOD_VALID');
+    expect(result).not.toContain('POSTGRES_INDEX_COLUMN_EXISTS');
 });
 
 /// Iceberg sort order
