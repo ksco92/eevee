@@ -76,6 +76,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `description` | yes | Non-empty. |
 | `tableType` | yes | `hive_parquet` \| `iceberg_parquet` \| `postgres_18`. |
 | `isRawData` | yes | `true` marks the top of the pipeline. |
+| `formatVersion` | no | Iceberg only: the table format version (`1`, `2`, or `3`). Other engines ignore it. |
 | `columns` | yes | Non-empty; each has `name`, `type`, `description`, and an optional `nullable`. `type` validated per engine. |
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
 | `partitions` | no | Engine-specific semantics (see below). |
@@ -92,6 +93,12 @@ nullability is unspecified and the cross-checks below do not fire.
   contradiction; primary-key columns are implicitly NOT NULL.
 - **`FK_NULLABILITY_CONSISTENT`** (warning) — a foreign key with `allowNulls: true` whose local column
   is declared `nullable: false` is inconsistent; a NOT NULL column can never be null.
+
+### Format version (Iceberg)
+
+An Iceberg table may declare a `formatVersion` of `1`, `2`, or `3`
+(**`ICEBERG_FORMAT_VERSION_VALID`**, error, when out of range). It is optional and engine-specific;
+non-Iceberg engines ignore the field.
 
 ### Partitions per engine
 

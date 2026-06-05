@@ -156,6 +156,17 @@ export abstract class TableTypeBase {
      */
     public abstract partitionViolations(): Violation[];
 
+    /**
+     * Engine-specific intra-table rules beyond column-type and partition checks
+     * (e.g. Iceberg format-version / table properties, Postgres indexes). The
+     * base engine has none; subclasses override to add them.
+     *
+     * @returns Engine-specific intra-table violations. Empty by default.
+     */
+    public engineSpecificViolations(): Violation[] {
+        return [];
+    }
+
     /// ////////////////////////////////////////////////////////////////////////
     // Agnostic intra-table rules.
 
@@ -279,6 +290,7 @@ export abstract class TableTypeBase {
             ...this.partitionViolations(),
             ...this.rawConsistencyViolations(),
             ...this.nullabilityViolations(),
+            ...this.engineSpecificViolations(),
         ];
     }
 

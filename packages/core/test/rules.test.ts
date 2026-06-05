@@ -490,6 +490,75 @@ test('a valid iceberg partition produces no partition violations', () => {
     expect(runSemanticRules(world)).toHaveLength(0);
 });
 
+/// Iceberg format version
+
+test('ICEBERG_FORMAT_VERSION_VALID fires on an out-of-range format version', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            formatVersion: 4,
+            columns: [
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_FORMAT_VERSION_VALID');
+});
+
+test('ICEBERG_FORMAT_VERSION_VALID passes on a supported format version', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            formatVersion: 2,
+            columns: [
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('ICEBERG_FORMAT_VERSION_VALID');
+});
+
+test('ICEBERG_FORMAT_VERSION_VALID stays silent when the format version is unspecified', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            columns: [
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('ICEBERG_FORMAT_VERSION_VALID');
+});
+
+test('format version is ignored for non-Iceberg engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            formatVersion: 99,
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('ICEBERG_FORMAT_VERSION_VALID');
+});
+
 /// Raw consistency
 
 test('RAW_NO_DEPENDS_ON fires when a raw table declares dependsOn', () => {

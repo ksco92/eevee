@@ -99,6 +99,37 @@ export class IcebergParquetTable extends TableTypeBase {
         return violations;
     }
 
+    /// The Iceberg format versions this validator understands.
+    private static readonly FORMAT_VERSIONS = new Set([
+        1,
+        2,
+        3,
+    ]);
+
+    /**
+     * Iceberg engine-specific rules.
+     *
+     * Emits `ICEBERG_FORMAT_VERSION_VALID` when `formatVersion` is set to
+     * anything other than 1, 2, or 3.
+     *
+     * @returns Every engine-specific violation.
+     */
+    public engineSpecificViolations(): Violation[] {
+        const violations: Violation[] = [];
+        const {
+            formatVersion,
+        } = this.definition;
+        if (formatVersion !== undefined && !IcebergParquetTable.FORMAT_VERSIONS.has(formatVersion)) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'ICEBERG_FORMAT_VERSION_VALID',
+                field: 'formatVersion',
+                message: `Iceberg formatVersion "${formatVersion}" must be 1, 2, or 3`,
+            }));
+        }
+        return violations;
+    }
+
     /**
      * Normalize a partition into its identity key. When the transform parses,
      * collapse on `${kind}:${param}` so `day` and `DAY`, `bucket[16]` and
