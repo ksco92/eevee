@@ -183,11 +183,13 @@ export class Postgres18Table extends TableTypeBase {
     }
 
     /**
-     * Validate identity columns, defaults, and the mutual exclusivity between a
-     * column being generated, an identity column, and having a default.
+     * Validate Postgres column attributes: identity columns, the mutual
+     * exclusivity between being generated / an identity / having a default, and
+     * per-column collation, compression, and storage.
      *
-     * Emits `POSTGRES_IDENTITY_VALID`, `POSTGRES_IDENTITY_TYPE_INTEGER`, and
-     * `POSTGRES_COLUMN_GENERATION_EXCLUSIVE`.
+     * Emits `POSTGRES_IDENTITY_VALID`, `POSTGRES_IDENTITY_TYPE_INTEGER`,
+     * `POSTGRES_COLUMN_GENERATION_EXCLUSIVE`, `POSTGRES_COLLATION_ON_TEXT_TYPE`,
+     * `POSTGRES_COMPRESSION_VALID`, and `POSTGRES_STORAGE_VALID`.
      *
      * @returns Every column-attribute violation.
      */
