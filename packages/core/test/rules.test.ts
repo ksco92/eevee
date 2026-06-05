@@ -321,6 +321,48 @@ test('Iceberg flags a genuinely duplicated partition (same source and transform)
     expect(codes(runSemanticRules(world))).toContain('NO_DUPLICATE_PARTITIONS');
 });
 
+test('Iceberg treats case variants of a transform as the same partition', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            columns: [
+                col('ts', 'timestamp'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('ts', 'day'),
+                part('ts', 'DAY'),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('NO_DUPLICATE_PARTITIONS');
+});
+
+test('Iceberg dedups parameterized transforms regardless of whitespace', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            columns: [
+                col('a', 'long'),
+                col('b', 'long'),
+            ],
+            primaryKey: [
+                'b',
+            ],
+            partitions: [
+                part('a', 'bucket[16]'),
+                part('a', 'bucket[ 16 ]'),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('NO_DUPLICATE_PARTITIONS');
+});
+
 test('a valid iceberg partition produces no partition violations', () => {
     const world = makeWorld([
         makeTable({

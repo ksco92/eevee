@@ -18,7 +18,7 @@ import {
  *
  * @param rootDir Path to the dataset root.
  * @returns The aggregate result. `ok` is false when any error-level violation exists.
- * @raises Error When `rootDir` is not an existing directory.
+ * @throws Error When `rootDir` is not an existing directory.
  */
 export function validateRoot(rootDir: string): ValidationResult {
     const {

@@ -120,7 +120,7 @@ const NAME_RE = /^[a-z0-9_]+$/;
  *
  * @param rootDir Absolute or relative path to the dataset root.
  * @returns The loaded world plus load-time violations.
- * @raises Error When `rootDir` is not an existing directory.
+ * @throws Error When `rootDir` is not an existing directory.
  */
 export function loadRoot(rootDir: string): LoadOutcome {
     const absoluteRoot = path.resolve(rootDir);
