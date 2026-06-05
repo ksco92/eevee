@@ -81,4 +81,4 @@ jobs:
           python3 -m isort --check-only ./src/ ./tests/
           python3 -m flake8 --config=setup.cfg ./
       - name: Test
-        run: python3 -m pytest tests/ --cov=src/fdd --cov-fail-under=95
+        run: python3 -m pytest tests/ --cov=src/flexdataset --cov-fail-under=95
