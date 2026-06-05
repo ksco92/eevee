@@ -875,6 +875,114 @@ test('indexes are ignored for non-Postgres engines', () => {
     expect(result).not.toContain('POSTGRES_INDEX_COLUMN_EXISTS');
 });
 
+/// Hive table properties
+
+function hiveWithProps(tableProperties: Record<string, string>) {
+    return makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            tableProperties,
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+}
+
+test('a valid Hive table-property set produces no violations', () => {
+    const result = runSemanticRules(hiveWithProps({
+        'parquet.compression': 'SNAPPY',
+        transactional: 'true',
+        transactional_properties: 'insert_only',
+    }));
+    expect(result).toHaveLength(0);
+});
+
+test('HIVE_PROPERTY_ENUM_VALID fires on an unknown compression codec', () => {
+    const result = codes(runSemanticRules(hiveWithProps({
+        'parquet.compression': 'lzma',
+    })));
+    expect(result).toContain('HIVE_PROPERTY_ENUM_VALID');
+});
+
+test('Hive compression codecs are matched case-insensitively', () => {
+    const result = codes(runSemanticRules(hiveWithProps({
+        'parquet.compression': 'zstd',
+    })));
+    expect(result).not.toContain('HIVE_PROPERTY_ENUM_VALID');
+});
+
+test('HIVE_PROPERTY_ENUM_VALID fires on an unknown transactional value', () => {
+    const result = codes(runSemanticRules(hiveWithProps({
+        transactional: 'maybe',
+    })));
+    expect(result).toContain('HIVE_PROPERTY_ENUM_VALID');
+});
+
+test('HIVE_FULL_ACID_REQUIRES_ORC fires when a transactional table is not insert-only', () => {
+    const result = codes(runSemanticRules(hiveWithProps({
+        transactional: 'true',
+    })));
+    expect(result).toContain('HIVE_FULL_ACID_REQUIRES_ORC');
+});
+
+test('HIVE_FULL_ACID_REQUIRES_ORC fires when transactional_properties is default', () => {
+    const result = codes(runSemanticRules(hiveWithProps({
+        transactional: 'true',
+        transactional_properties: 'default',
+    })));
+    expect(result).toContain('HIVE_FULL_ACID_REQUIRES_ORC');
+});
+
+test('HIVE_FULL_ACID_REQUIRES_ORC stays silent for insert-only ACID', () => {
+    const result = codes(runSemanticRules(hiveWithProps({
+        transactional: 'true',
+        transactional_properties: 'insert_only',
+    })));
+    expect(result).not.toContain('HIVE_FULL_ACID_REQUIRES_ORC');
+});
+
+test('HIVE_FULL_ACID_REQUIRES_ORC stays silent for a non-transactional table', () => {
+    const result = codes(runSemanticRules(hiveWithProps({
+        transactional: 'false',
+    })));
+    expect(result).not.toContain('HIVE_FULL_ACID_REQUIRES_ORC');
+});
+
+test('unknown Hive table properties pass through unvalidated', () => {
+    const result = runSemanticRules(hiveWithProps({
+        'my.custom.key': 'whatever',
+        'orc.compress': 'ZLIB',
+    }));
+    expect(result).toHaveLength(0);
+});
+
+test('Hive table properties are ignored for non-Hive engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            tableProperties: {
+                'parquet.compression': 'lzma',
+                transactional: 'true',
+            },
+            columns: [
+                col('a', 'integer'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('HIVE_PROPERTY_ENUM_VALID');
+    expect(result).not.toContain('HIVE_FULL_ACID_REQUIRES_ORC');
+});
+
 /// Hive bucketing
 
 test('a valid Hive bucketing spec produces no violations', () => {

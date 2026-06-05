@@ -181,6 +181,15 @@ For `iceberg_parquet` the validated keys are:
 - **Bounded integer** (**`ICEBERG_PROPERTY_INT_RANGE`**, error) — `write.parquet.compression-level`
   (1–22).
 
+For `hive_parquet` the validated keys are (values compared case-insensitively):
+
+- **Enum** (**`HIVE_PROPERTY_ENUM_VALID`**, error) — `parquet.compression`
+  (`uncompressed`/`snappy`/`gzip`/`lzo`/`zstd`/`brotli`/`lz4_raw`), `transactional` (`true`/`false`),
+  `transactional_properties` (`default`/`insert_only`).
+- **ACID storage** (**`HIVE_FULL_ACID_REQUIRES_ORC`**, error) — full ACID
+  (`transactional=true` without `transactional_properties=insert_only`) requires ORC storage, so a
+  `hive_parquet` table may only use insert-only ACID.
+
 ### Bucketing (Hive)
 
 A `hive_parquet` table may declare `bucketing` (`CLUSTERED BY … INTO N BUCKETS [SORTED BY …]`): a

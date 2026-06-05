@@ -21,6 +21,28 @@ const SORT_DIRECTIONS: ReadonlySet<string> = new Set([
     'desc',
 ]);
 
+/// Hive table-property keys whose value must come from a closed set (compared
+/// case-insensitively, matching HiveQL).
+const ENUM_PROPERTIES: Record<string, readonly string[]> = {
+    'parquet.compression': [
+        'uncompressed',
+        'snappy',
+        'gzip',
+        'lzo',
+        'zstd',
+        'brotli',
+        'lz4_raw',
+    ],
+    transactional: [
+        'true',
+        'false',
+    ],
+    transactional_properties: [
+        'default',
+        'insert_only',
+    ],
+};
+
 /** Hive (parquet) table. */
 export class HiveParquetTable extends TableTypeBase {
     /**
@@ -84,12 +106,61 @@ export class HiveParquetTable extends TableTypeBase {
     }
 
     /**
-     * Hive engine-specific rules: bucketing.
+     * Hive engine-specific rules: bucketing and table properties.
      *
      * @returns Every engine-specific violation.
      */
     public engineSpecificViolations(): Violation[] {
-        return this.bucketingViolations();
+        return [
+            ...this.bucketingViolations(),
+            ...this.tablePropertyViolations(),
+        ];
+    }
+
+    /**
+     * Validate the closed-domain Hive table properties and the
+     * Parquet-vs-ORC ACID rule. Keys outside the known set pass through.
+     *
+     * Emits `HIVE_PROPERTY_ENUM_VALID` and `HIVE_FULL_ACID_REQUIRES_ORC`.
+     *
+     * @returns Every table-property violation.
+     */
+    private tablePropertyViolations(): Violation[] {
+        const violations: Violation[] = [];
+        const properties = this.definition.tableProperties;
+
+        for (const [
+            key,
+            value,
+        ] of Object.entries(properties)) {
+            const allowed = ENUM_PROPERTIES[key];
+            if (allowed !== undefined && !allowed.includes(value.trim().toLowerCase())) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'HIVE_PROPERTY_ENUM_VALID',
+                    field: `tableProperties["${key}"]`,
+                    message: `table property "${key}" value "${value}" must be one of: ${allowed.join(', ')}`,
+                }));
+            }
+        }
+
+        /// Full ACID (transactional without insert_only) needs ORC storage, so it
+        /// is invalid on a Parquet table; only insert-only ACID is legal here.
+        const transactional = properties.transactional?.trim().toLowerCase();
+        if (transactional === 'true') {
+            const insertOnly = properties.transactional_properties?.trim().toLowerCase() === 'insert_only';
+            if (!insertOnly) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'HIVE_FULL_ACID_REQUIRES_ORC',
+                    field: 'tableProperties["transactional"]',
+                    message: 'full ACID requires ORC storage; a hive_parquet table may only use '
+                        + 'insert-only ACID (transactional_properties="insert_only")',
+                }));
+            }
+        }
+
+        return violations;
     }
 
     /**
