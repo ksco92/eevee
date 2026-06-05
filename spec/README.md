@@ -337,3 +337,26 @@ Cross-schema references (in `dependsOn` and foreign keys) are allowed.
 - If a `<schema>.json` file contains a table definition (a table sharing the schema's name), it is read
   as the schema description and fails structural validation rather than producing a name-collision
   message.
+
+### Deliberately deferred validations
+
+These engine features were considered and **intentionally left out of v0**. The reason is recorded so
+the decision is explicit rather than an oversight; each could become a later addition.
+
+- **Postgres child partitions / bounds and sub-partitioning** — FDD models the partition *key*
+  (which columns, which strategy), not the *child-partition list* (the concrete `FROM/TO`, `IN`,
+  `MODULUS/REMAINDER`, `DEFAULT` bounds, or nested sub-partition trees). Modeling those is a separate
+  structural layer beyond the v0 altitude.
+- **Postgres physical-tuning knobs** — storage parameters (`fillfactor`, `autovacuum_*`) and
+  `tablespace` are physical/operational settings, not data-model shape. Tablespace in particular has no
+  closed legal domain (environment-specific names), so it falls under the free-form passthrough rule.
+- **Iceberg v3 column defaults** (`initial-default` / `write-default`) — gated on format version 3 and
+  requiring per-type value compatibility that is hard to validate well statically; revisit alongside
+  nested types.
+- **Iceberg partition evolution / multiple partition specs** — table-history concern, not the static
+  current-shape FDD describes; the single-spec `partitions` model is the right altitude for v0.
+- **Hive partition-column ordering** — already covered: `partitions` is an ordered list and its order
+  is significant; there is no separate rule to add.
+- **Free-form table properties / SerDe properties** — only keys with a closed legal domain are
+  validated (per engine). Everything else (arbitrary `tableProperties` / `serdeProperties` keys) is an
+  intentional unvalidated passthrough, so engine tuning is never blocked.
