@@ -1,0 +1,4 @@
+{
+    "specVersion": "0",
+    "description": "Schema whose only issue is a non-key foreign-key target."
+}

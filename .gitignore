@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+coverage
+
+# compiled JS / declarations from the TS sources
+packages/core/**/*.js
+!packages/core/jest.config.js
+!packages/core/eslint.config.js
+packages/core/**/*.d.ts
+
+# intentionally uncommitted working plan
+TODO.md
+
+.idea
+.DS_Store
+*.log

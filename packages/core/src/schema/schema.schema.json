@@ -1,0 +1,27 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/ksco92/eevee/main/packages/core/src/schema/schema.schema.json",
+    "title": "FDD Schema Description",
+    "description": "Structural schema (Layer 1) for an FDD schema-description file.",
+    "type": "object",
+    "required": [
+        "specVersion",
+        "description"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "$schema": {
+            "type": "string"
+        },
+        "specVersion": {
+            "type": "string",
+            "enum": [
+                "0"
+            ]
+        },
+        "description": {
+            "type": "string",
+            "minLength": 1
+        }
+    }
+}

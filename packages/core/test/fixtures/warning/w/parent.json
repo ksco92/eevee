@@ -1,0 +1,21 @@
+{
+    "specVersion": "0",
+    "description": "Parent table with a non-key label column.",
+    "tableType": "hive_parquet",
+    "isRawData": true,
+    "columns": [
+        {
+            "name": "id",
+            "type": "bigint",
+            "description": "Primary key."
+        },
+        {
+            "name": "label",
+            "type": "string",
+            "description": "Non-key label."
+        }
+    ],
+    "primaryKey": [
+        "id"
+    ]
+}

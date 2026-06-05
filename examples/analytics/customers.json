@@ -1,0 +1,43 @@
+{
+    "$schema": "https://raw.githubusercontent.com/ksco92/eevee/main/packages/core/src/schema/table.schema.json",
+    "specVersion": "0",
+    "description": "One row per customer with derived attributes.",
+    "tableType": "postgres_18",
+    "isRawData": false,
+    "columns": [
+        {
+            "name": "customer_id",
+            "type": "bigint",
+            "description": "Surrogate customer key."
+        },
+        {
+            "name": "email",
+            "type": "varchar(320)",
+            "description": "Customer email address."
+        },
+        {
+            "name": "lifetime_value",
+            "type": "numeric(12,2)",
+            "description": "Total spend to date."
+        },
+        {
+            "name": "is_active",
+            "type": "boolean",
+            "description": "Whether the customer is active."
+        }
+    ],
+    "primaryKey": [
+        "customer_id"
+    ],
+    "dependsOn": [
+        "raw.customers_raw"
+    ],
+    "foreignKeys": [
+        {
+            "sourceTable": "raw.customers_raw",
+            "sourceColumn": "id",
+            "localColumn": "customer_id",
+            "allowNulls": false
+        }
+    ]
+}
