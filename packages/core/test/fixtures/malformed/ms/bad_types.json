@@ -26,6 +26,18 @@
         ],
         "bucketCount": "lots"
     },
+    "exclusionConstraints": [
+        {
+            "name": "x",
+            "using": "gist",
+            "elements": [
+                {
+                    "column": "a",
+                    "operator": "="
+                }
+            ]
+        }
+    ],
     "dependsOn": [
         2,
         "x.y"

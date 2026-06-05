@@ -15,6 +15,7 @@ import {
     Bucketing,
     CheckConstraint,
     Column,
+    ExclusionConstraint,
     ForeignKey,
     Index,
     Partition,
@@ -165,6 +166,23 @@ function normalizeCheckConstraints(value: unknown): CheckConstraint[] {
     });
 }
 
+function normalizeExclusionConstraints(value: unknown): ExclusionConstraint[] {
+    return asArray(value).map((raw) => {
+        const record = asRecord(raw);
+        return {
+            name: asString(record.name),
+            using: asString(record.using),
+            elements: asArray(record.elements).map((rawElement) => {
+                const elementRecord = asRecord(rawElement);
+                return {
+                    column: asString(elementRecord.column),
+                    operator: asString(elementRecord.operator),
+                };
+            }),
+        };
+    });
+}
+
 function normalizeBucketing(value: unknown): Bucketing | undefined {
     if (value === null || typeof value !== 'object') {
         return undefined;
@@ -224,6 +242,7 @@ function normalizeTableDefinition(raw: unknown): TableDefinition {
         indexes: normalizeIndexes(record.indexes),
         uniqueConstraints: normalizeUniqueConstraints(record.uniqueConstraints),
         checkConstraints: normalizeCheckConstraints(record.checkConstraints),
+        exclusionConstraints: normalizeExclusionConstraints(record.exclusionConstraints),
         bucketing: normalizeBucketing(record.bucketing),
         tableProperties: normalizeStringMap(record.tableProperties),
         dependsOn: asStringArray(record.dependsOn),

@@ -85,6 +85,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `indexes` | no | Postgres only: secondary indexes (`name`, `method`, optional `unique`, `columns`, `include`, `where`). Other engines ignore them. |
 | `uniqueConstraints` | no | Postgres only: table-level UNIQUE constraints (`name`, `columns`, optional `nullsNotDistinct`). Other engines ignore them. |
 | `checkConstraints` | no | Postgres only: CHECK constraints (`name`, opaque `expression`, referenced `columns`). Other engines ignore them. |
+| `exclusionConstraints` | no | Postgres only: EXCLUDE constraints (`name`, `using`, `elements` of `column`/`operator`). Other engines ignore them. |
 | `tableProperties` | no | String→string map of engine settings. Only keys with a closed legal domain are validated per engine (see below); unknown keys pass through. |
 | `dependsOn` | conditionally | Required & non-empty when `isRawData` is `false`. Entries are `schema.table`. |
 | `foreignKeys` | no | Each: `sourceTable` (`schema.table`), `sourceColumn`, `localColumn`, `allowNulls`. |
@@ -161,6 +162,18 @@ explicit `columns` the predicate references). Checks:
 
 The check `expression` itself stays opaque; only its declared (non-empty) `columns` are resolved. Both
 fields are engine-specific; non-Postgres engines ignore them.
+
+A Postgres table may also declare `exclusionConstraints` (each a `name`, an index `using` method, and a
+non-empty `elements` list of `column`/`operator` pairs). Checks:
+
+- **`POSTGRES_EXCLUSION_NAME_UNIQUE`** (error) — names are unique within the table.
+- **`POSTGRES_EXCLUSION_METHOD_VALID`** (error) — `using` is `gist` or `spgist`.
+- **`POSTGRES_EXCLUSION_COLUMN_EXISTS`** (error) — every element column exists in `columns`.
+- **`POSTGRES_EXCLUSION_NO_DUPLICATE_COLUMNS`** (error) — no element column is repeated.
+- **`POSTGRES_EXCLUSION_INCLUDES_PARTITION_KEYS`** (error) — on a partitioned table, the constraint must
+  include every partition-key column.
+
+The element `operator` stays opaque. The field is engine-specific; non-Postgres engines ignore it.
 
 ### Table properties
 

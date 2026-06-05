@@ -1713,6 +1713,228 @@ test('identity and default attributes are ignored for non-Postgres engines', () 
     expect(result).not.toContain('POSTGRES_COLUMN_GENERATION_EXCLUSIVE');
 });
 
+/// Postgres exclusion constraints
+
+test('a valid Postgres exclusion constraint produces no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            exclusionConstraints: [
+                {
+                    name: 'no_overlap',
+                    using: 'gist',
+                    elements: [
+                        {
+                            column: 'room',
+                            operator: '=',
+                        },
+                    ],
+                },
+            ],
+            columns: [
+                col('id', 'integer'),
+                col('room', 'integer'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('POSTGRES_EXCLUSION_NAME_UNIQUE fires on duplicate constraint names', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            exclusionConstraints: [
+                {
+                    name: 'dup',
+                    using: 'gist',
+                    elements: [
+                        {
+                            column: 'a',
+                            operator: '=',
+                        },
+                    ],
+                },
+                {
+                    name: 'dup',
+                    using: 'gist',
+                    elements: [
+                        {
+                            column: 'b',
+                            operator: '=',
+                        },
+                    ],
+                },
+            ],
+            columns: [
+                col('a', 'integer'),
+                col('b', 'integer'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_EXCLUSION_NAME_UNIQUE');
+});
+
+test('POSTGRES_EXCLUSION_METHOD_VALID fires on an unknown method', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            exclusionConstraints: [
+                {
+                    name: 'x',
+                    using: 'btree',
+                    elements: [
+                        {
+                            column: 'a',
+                            operator: '=',
+                        },
+                    ],
+                },
+            ],
+            columns: [
+                col('a', 'integer'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_EXCLUSION_METHOD_VALID');
+});
+
+test('POSTGRES_EXCLUSION_COLUMN_EXISTS fires when an element column is missing', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            exclusionConstraints: [
+                {
+                    name: 'x',
+                    using: 'gist',
+                    elements: [
+                        {
+                            column: 'ghost',
+                            operator: '=',
+                        },
+                    ],
+                },
+            ],
+            columns: [
+                col('a', 'integer'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_EXCLUSION_COLUMN_EXISTS');
+});
+
+test('POSTGRES_EXCLUSION_NO_DUPLICATE_COLUMNS fires on a repeated element column', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            exclusionConstraints: [
+                {
+                    name: 'x',
+                    using: 'gist',
+                    elements: [
+                        {
+                            column: 'a',
+                            operator: '=',
+                        },
+                        {
+                            column: 'a',
+                            operator: '&&',
+                        },
+                    ],
+                },
+            ],
+            columns: [
+                col('a', 'integer'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_EXCLUSION_NO_DUPLICATE_COLUMNS');
+});
+
+test('POSTGRES_EXCLUSION_INCLUDES_PARTITION_KEYS fires when an exclusion omits a partition key', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            exclusionConstraints: [
+                {
+                    name: 'x',
+                    using: 'gist',
+                    elements: [
+                        {
+                            column: 'room',
+                            operator: '=',
+                        },
+                    ],
+                },
+            ],
+            partitions: [
+                part('tenant', 'range'),
+            ],
+            columns: [
+                col('id', 'integer'),
+                col('tenant', 'integer'),
+                col('room', 'integer'),
+            ],
+            primaryKey: [
+                'id',
+                'tenant',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_EXCLUSION_INCLUDES_PARTITION_KEYS');
+});
+
+test('exclusion constraints are ignored for non-Postgres engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            exclusionConstraints: [
+                {
+                    name: 'x',
+                    using: 'btree',
+                    elements: [
+                        {
+                            column: 'ghost',
+                            operator: '=',
+                        },
+                    ],
+                },
+            ],
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('POSTGRES_EXCLUSION_METHOD_VALID');
+    expect(result).not.toContain('POSTGRES_EXCLUSION_COLUMN_EXISTS');
+});
+
 /// Postgres unique and check constraints
 
 test('a valid Postgres unique constraint produces no violations', () => {

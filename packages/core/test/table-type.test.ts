@@ -36,6 +36,7 @@ function emptyDefinition(): TableDefinition {
         indexes: [],
         uniqueConstraints: [],
         checkConstraints: [],
+        exclusionConstraints: [],
         tableProperties: {},
         dependsOn: [],
         foreignKeys: [],

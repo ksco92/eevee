@@ -181,6 +181,22 @@
             ]
         }
     ],
+    "exclusionConstraints": [
+        {
+            "name": "ex_customers_no_overlap",
+            "using": "gist",
+            "elements": [
+                {
+                    "column": "customer_id",
+                    "operator": "="
+                },
+                {
+                    "column": "created_at",
+                    "operator": "&&"
+                }
+            ]
+        }
+    ],
     "indexes": [
         {
             "name": "uq_customers_email",
