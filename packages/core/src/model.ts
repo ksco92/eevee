@@ -114,6 +114,33 @@ export interface Index {
     readonly where?: string;
 }
 
+/** A table-level UNIQUE constraint over one or more columns (Postgres). */
+export interface UniqueConstraint {
+    /** Constraint name (unique within the table). */
+    readonly name: string;
+
+    /** Columns the constraint spans. */
+    readonly columns: string[];
+
+    /** Whether nulls are treated as not distinct (`NULLS NOT DISTINCT`). */
+    readonly nullsNotDistinct?: boolean;
+}
+
+/**
+ * A CHECK constraint (Postgres). `expression` is an opaque predicate; `columns`
+ * is the explicit list of columns it references, which is what gets validated.
+ */
+export interface CheckConstraint {
+    /** Constraint name (unique within the table). */
+    readonly name: string;
+
+    /** Opaque boolean predicate. */
+    readonly expression: string;
+
+    /** Columns the predicate references. */
+    readonly columns: string[];
+}
+
 /** A foreign-key reference to a column in another table. */
 export interface ForeignKey {
     /** Referenced table in `schema.table` format. */
@@ -163,6 +190,12 @@ export interface TableDefinition {
 
     /** Secondary indexes (Postgres). Optional; other engines ignore them. */
     readonly indexes: Index[];
+
+    /** UNIQUE constraints (Postgres). Optional; other engines ignore them. */
+    readonly uniqueConstraints: UniqueConstraint[];
+
+    /** CHECK constraints (Postgres). Optional; other engines ignore them. */
+    readonly checkConstraints: CheckConstraint[];
 
     /**
      * Engine table properties as a string→string map (e.g. Iceberg

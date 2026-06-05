@@ -12,6 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import {
+    CheckConstraint,
     Column,
     ForeignKey,
     Index,
@@ -19,6 +20,7 @@ import {
     SchemaDescription,
     SortField,
     TableDefinition,
+    UniqueConstraint,
     Violation,
 } from './model';
 import {
@@ -132,6 +134,28 @@ function normalizeIndexes(value: unknown): Index[] {
     });
 }
 
+function normalizeUniqueConstraints(value: unknown): UniqueConstraint[] {
+    return asArray(value).map((raw) => {
+        const record = asRecord(raw);
+        return {
+            name: asString(record.name),
+            columns: asStringArray(record.columns),
+            nullsNotDistinct: asOptionalBoolean(record.nullsNotDistinct),
+        };
+    });
+}
+
+function normalizeCheckConstraints(value: unknown): CheckConstraint[] {
+    return asArray(value).map((raw) => {
+        const record = asRecord(raw);
+        return {
+            name: asString(record.name),
+            expression: asString(record.expression),
+            columns: asStringArray(record.columns),
+        };
+    });
+}
+
 function normalizeStringMap(value: unknown): Record<string, string> {
     const record = asRecord(value);
     const result: Record<string, string> = {};
@@ -171,6 +195,8 @@ function normalizeTableDefinition(raw: unknown): TableDefinition {
         partitions: normalizePartitions(record.partitions),
         sortOrder: normalizeSortOrder(record.sortOrder),
         indexes: normalizeIndexes(record.indexes),
+        uniqueConstraints: normalizeUniqueConstraints(record.uniqueConstraints),
+        checkConstraints: normalizeCheckConstraints(record.checkConstraints),
         tableProperties: normalizeStringMap(record.tableProperties),
         dependsOn: asStringArray(record.dependsOn),
         foreignKeys: normalizeForeignKeys(record.foreignKeys),

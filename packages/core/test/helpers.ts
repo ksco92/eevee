@@ -3,11 +3,13 @@
  */
 
 import {
+    CheckConstraint,
     Column,
     ForeignKey,
     Index,
     Partition,
     SortField,
+    UniqueConstraint,
     Violation,
 } from '../src/model';
 import {
@@ -52,6 +54,8 @@ export interface TableInput {
     partitions?: Partition[];
     sortOrder?: SortField[];
     indexes?: Index[];
+    uniqueConstraints?: UniqueConstraint[];
+    checkConstraints?: CheckConstraint[];
     tableProperties?: Record<string, string>;
     dependsOn?: string[];
     foreignKeys?: ForeignKey[];
@@ -79,6 +83,8 @@ export function makeTable(input: TableInput): TableTypeBase {
             partitions: input.partitions ?? [],
             sortOrder: input.sortOrder ?? [],
             indexes: input.indexes ?? [],
+            uniqueConstraints: input.uniqueConstraints ?? [],
+            checkConstraints: input.checkConstraints ?? [],
             tableProperties: input.tableProperties ?? {},
             dependsOn: input.dependsOn ?? [],
             foreignKeys: input.foreignKeys ?? [],

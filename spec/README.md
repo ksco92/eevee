@@ -82,6 +82,8 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `partitions` | no | Engine-specific semantics (see below). |
 | `sortOrder` | no | Iceberg only: ordered sort fields (`column`, optional `transform`, `direction`, `nullOrder`). Other engines ignore it. |
 | `indexes` | no | Postgres only: secondary indexes (`name`, `method`, optional `unique`, `columns`, `include`, `where`). Other engines ignore them. |
+| `uniqueConstraints` | no | Postgres only: table-level UNIQUE constraints (`name`, `columns`, optional `nullsNotDistinct`). Other engines ignore them. |
+| `checkConstraints` | no | Postgres only: CHECK constraints (`name`, opaque `expression`, referenced `columns`). Other engines ignore them. |
 | `tableProperties` | no | String→string map of engine settings. Only keys with a closed legal domain are validated per engine (see below); unknown keys pass through. |
 | `dependsOn` | conditionally | Required & non-empty when `isRawData` is `false`. Entries are `schema.table`. |
 | `foreignKeys` | no | Each: `sourceTable` (`schema.table`), `sourceColumn`, `localColumn`, `allowNulls`. |
@@ -138,6 +140,21 @@ A `postgres_18` table may declare `indexes`: secondary indexes, each with a `nam
 
 The field is engine-specific; non-Postgres engines ignore it.
 
+### Unique and check constraints (Postgres)
+
+A `postgres_18` table may declare `uniqueConstraints` (each a `name` plus a non-empty `columns` list
+and optional `nullsNotDistinct`) and `checkConstraints` (each a `name`, an opaque `expression`, and the
+explicit `columns` the predicate references). Checks:
+
+- **`POSTGRES_UNIQUE_NAME_UNIQUE`** / **`POSTGRES_CHECK_NAME_UNIQUE`** (error) — constraint names are
+  unique within their kind.
+- **`POSTGRES_UNIQUE_COLUMN_EXISTS`** / **`POSTGRES_CHECK_COLUMN_EXISTS`** (error) — every referenced
+  column exists in `columns`.
+- **`POSTGRES_UNIQUE_NO_DUPLICATE_COLUMNS`** (error) — a unique constraint lists no column twice.
+
+The check `expression` itself stays opaque; only its declared `columns` are resolved. Both fields are
+engine-specific; non-Postgres engines ignore them.
+
 ### Table properties
 
 `tableProperties` is an optional string→string map of engine settings. Only keys with a known, closed
@@ -169,8 +186,9 @@ For `iceberg_parquet` the validated keys are:
   (source column, transform) pair must be unique. Type and transform names are case-insensitive.
 - **`postgres_18`** — declarative partitioning: each partition entry names an existing key column
   (`name`) and a strategy (`type`: `range`, `list`, or `hash`, case-insensitive). A table partitions by
-  one strategy over one or more key columns, so all entries must share the same strategy. (Expression
-  keys and sub-partitioning are out of scope.)
+  one strategy over one or more key columns, so all entries must share the same strategy. Every
+  partition-key column must also be part of the `primaryKey` (**`POSTGRES_PARTITION_KEY_IN_PK`**, error),
+  as Postgres requires. (Expression keys and sub-partitioning are out of scope.)
 
 ## Validation layers
 
