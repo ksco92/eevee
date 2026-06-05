@@ -59,8 +59,9 @@ The dev loop for every change:
 4. Merge **only if both reviewers pass**. A FAIL from either blocks the merge —
    fix the findings and re-run before merging.
 
-Branch protection requires green CI plus both reviews. This gate is
-human-enforced until wired into required status checks.
+`main` is branch-protected: direct pushes are blocked (`enforce_admins` on), so
+changes land only through merged PRs. The two reviews and green CI are still
+enforced at review time, not yet wired as GitHub-required status checks.
 
 ## Documentation sync
 
