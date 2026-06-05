@@ -149,9 +149,8 @@ export abstract class TableTypeBase {
     public abstract isValidColumnType(type: string): boolean;
 
     /**
-     * Engine-specific partition rules: duplicate detection, type/transform
-     * legality, and the "no partitions allowed" rule for engines that don't
-     * support them.
+     * Engine-specific partition rules: duplicate detection plus the engine's
+     * key/column resolution and type / transform / strategy legality.
      *
      * @returns Every partition-related violation this table produces.
      */

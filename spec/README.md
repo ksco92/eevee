@@ -78,7 +78,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `isRawData` | yes | `true` marks the top of the pipeline. |
 | `columns` | yes | Non-empty; each has `name`, `type`, `description`. `type` validated per engine. |
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
-| `partitions` | no | Hive/Iceberg only (see below). |
+| `partitions` | no | Engine-specific semantics (see below). |
 | `dependsOn` | conditionally | Required & non-empty when `isRawData` is `false`. Entries are `schema.table`. |
 | `foreignKeys` | no | Each: `sourceTable` (`schema.table`), `sourceColumn`, `localColumn`, `allowNulls`. |
 

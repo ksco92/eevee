@@ -200,6 +200,30 @@ test('POSTGRES_PARTITION_SINGLE_STRATEGY fires when strategies are mixed', () =>
     expect(codes(runSemanticRules(world))).toContain('POSTGRES_PARTITION_SINGLE_STRATEGY');
 });
 
+test('POSTGRES_PARTITION_SINGLE_STRATEGY ignores invalid strategies', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                col('region', 'text'),
+                col('created_at', 'timestamptz'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+            partitions: [
+                part('created_at', 'range'),
+                part('region', 'weekly'),
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).toContain('POSTGRES_PARTITION_STRATEGY_VALID');
+    expect(result).not.toContain('POSTGRES_PARTITION_SINGLE_STRATEGY');
+});
+
 /// Partitions — duplicates
 
 test('NO_DUPLICATE_PARTITIONS fires on repeated partition names', () => {
