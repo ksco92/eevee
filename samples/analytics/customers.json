@@ -151,7 +151,8 @@
         {
             "name": "uq_customers_uid",
             "columns": [
-                "uid"
+                "uid",
+                "created_at"
             ],
             "nullsNotDistinct": false
         }

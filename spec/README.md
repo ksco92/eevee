@@ -147,13 +147,19 @@ and optional `nullsNotDistinct`) and `checkConstraints` (each a `name`, an opaqu
 explicit `columns` the predicate references). Checks:
 
 - **`POSTGRES_UNIQUE_NAME_UNIQUE`** / **`POSTGRES_CHECK_NAME_UNIQUE`** (error) — constraint names are
-  unique within their kind.
+  unique within their kind. (Postgres uses a single per-table constraint namespace; FDD treats the two
+  kinds independently, so give a unique and a check distinct names if you intend to round-trip to
+  Postgres.)
 - **`POSTGRES_UNIQUE_COLUMN_EXISTS`** / **`POSTGRES_CHECK_COLUMN_EXISTS`** (error) — every referenced
   column exists in `columns`.
 - **`POSTGRES_UNIQUE_NO_DUPLICATE_COLUMNS`** (error) — a unique constraint lists no column twice.
+- **`POSTGRES_UNIQUE_REDUNDANT_WITH_PK`** (warning) — a unique constraint whose column set equals the
+  `primaryKey` is redundant.
+- **`POSTGRES_UNIQUE_INCLUDES_PARTITION_KEYS`** (error) — on a partitioned table, a unique constraint
+  must include every partition-key column (Postgres requires it).
 
-The check `expression` itself stays opaque; only its declared `columns` are resolved. Both fields are
-engine-specific; non-Postgres engines ignore them.
+The check `expression` itself stays opaque; only its declared (non-empty) `columns` are resolved. Both
+fields are engine-specific; non-Postgres engines ignore them.
 
 ### Table properties
 

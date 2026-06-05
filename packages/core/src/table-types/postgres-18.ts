@@ -188,7 +188,44 @@ export class Postgres18Table extends TableTypeBase {
                     }));
                 }
             });
+
+            violations.push(...this.uniqueConstraintKeyViolations(constraint, field));
         });
+
+        return violations;
+    }
+
+    /// Relationship rules between a unique constraint and the primary key /
+    /// partition key: redundancy with the PK, and the Postgres rule that a
+    /// unique constraint on a partitioned table must include every partition key.
+    private uniqueConstraintKeyViolations(constraint: UniqueConstraint, field: string): Violation[] {
+        const violations: Violation[] = [];
+
+        const primaryKey = this.definition.primaryKey;
+        const columnSet = new Set(constraint.columns);
+        if (primaryKey.length > 0 && primaryKey.length === columnSet.size
+            && primaryKey.every((column) => columnSet.has(column))) {
+            violations.push(this.violation({
+                level: 'warning',
+                code: 'POSTGRES_UNIQUE_REDUNDANT_WITH_PK',
+                field: `${field}.columns`,
+                message: `unique constraint "${constraint.name}" duplicates the primary key`,
+            }));
+        }
+
+        const partitionKeys = this.definition.partitions
+            .map((partition) => partition.name)
+            .filter((name) => this.hasColumn(name));
+        const missing = partitionKeys.filter((name) => !constraint.columns.includes(name));
+        if (missing.length > 0) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'POSTGRES_UNIQUE_INCLUDES_PARTITION_KEYS',
+                field: `${field}.columns`,
+                message: `unique constraint "${constraint.name}" on a partitioned table must include `
+                    + `every partition key column; missing: ${missing.join(', ')}`,
+            }));
+        }
 
         return violations;
     }

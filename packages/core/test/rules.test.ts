@@ -1066,6 +1066,90 @@ test('POSTGRES_CHECK_COLUMN_EXISTS fires when a referenced column is missing', (
     expect(codes(runSemanticRules(world))).toContain('POSTGRES_CHECK_COLUMN_EXISTS');
 });
 
+test('POSTGRES_UNIQUE_REDUNDANT_WITH_PK warns when a unique constraint duplicates the primary key', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            uniqueConstraints: [
+                {
+                    name: 'uq',
+                    columns: [
+                        'id',
+                    ],
+                },
+            ],
+            columns: [
+                col('id', 'integer'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_UNIQUE_REDUNDANT_WITH_PK');
+});
+
+test('POSTGRES_UNIQUE_INCLUDES_PARTITION_KEYS fires when a unique omits a partition key', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            uniqueConstraints: [
+                {
+                    name: 'uq',
+                    columns: [
+                        'id',
+                    ],
+                },
+            ],
+            partitions: [
+                part('created_at', 'range'),
+            ],
+            columns: [
+                col('id', 'integer'),
+                col('created_at', 'timestamptz'),
+            ],
+            primaryKey: [
+                'id',
+                'created_at',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_UNIQUE_INCLUDES_PARTITION_KEYS');
+});
+
+test('POSTGRES_UNIQUE_INCLUDES_PARTITION_KEYS stays silent when the unique includes the partition key', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            uniqueConstraints: [
+                {
+                    name: 'uq',
+                    columns: [
+                        'email',
+                        'created_at',
+                    ],
+                },
+            ],
+            partitions: [
+                part('created_at', 'range'),
+            ],
+            columns: [
+                col('id', 'integer'),
+                col('email', 'text'),
+                col('created_at', 'timestamptz'),
+            ],
+            primaryKey: [
+                'id',
+                'created_at',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('POSTGRES_UNIQUE_INCLUDES_PARTITION_KEYS');
+});
+
 test('unique and check constraints are ignored for non-Postgres engines', () => {
     const world = makeWorld([
         makeTable({
