@@ -35,15 +35,16 @@ export interface Column {
 }
 
 /**
- * A partition entry. The meaning of `type` is engine-specific: for Hive it is a
- * normal type on a new partition column; for Iceberg it is a transform applied
- * to the data column named by `name`.
+ * A partition entry. The meaning of `name` and `type` is engine-specific: for
+ * Hive, `name` is a new partition column and `type` is a normal type; for
+ * Iceberg, `name` is a source data column and `type` is a transform; for
+ * Postgres, `name` is an existing key column and `type` is the strategy.
  */
 export interface Partition {
-    /** Hive: new partition column name. Iceberg: source (data) column name. */
+    /** Hive: new partition column name. Iceberg / Postgres: existing data/key column name. */
     readonly name: string;
 
-    /** Hive: a normal type. Iceberg: a transform (e.g. `day`, `bucket[16]`). */
+    /** Hive: a normal type. Iceberg: a transform (e.g. `day`, `bucket[16]`). Postgres: a strategy (`range` / `list` / `hash`). */
     readonly type: string;
 
     /** Human description. */

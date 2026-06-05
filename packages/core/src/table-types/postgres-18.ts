@@ -1,11 +1,14 @@
 /**
  * Postgres 18 table type.
  *
- * Postgres partitioning is deferred to a later FDD version, so any partition
- * entry is an error.
+ * Postgres uses declarative partitioning: a table is partitioned by one strategy
+ * (`range`, `list`, or `hash`) over one or more existing key columns. Each
+ * partition entry names a key column (`name`) and the strategy (`type`); all
+ * entries on a table must share one strategy.
  */
 
 import {
+    Partition,
     Violation,
 } from '../model';
 import {
@@ -14,6 +17,12 @@ import {
 import {
     isValidPostgresType,
 } from '../types';
+
+const STRATEGIES: ReadonlySet<string> = new Set([
+    'range',
+    'list',
+    'hash',
+]);
 
 /** Postgres 18 table. */
 export class Postgres18Table extends TableTypeBase {
@@ -28,22 +37,66 @@ export class Postgres18Table extends TableTypeBase {
     }
 
     /**
-     * Postgres has no partitions in v0; emit `PARTITIONS_ALLOWED_FOR_TYPE`
-     * once when any partition entry is present.
+     * Postgres partition rules.
      *
-     * @returns The single partition violation when partitions are declared, otherwise empty.
+     * Emits: `NO_DUPLICATE_PARTITIONS` (a key column listed twice),
+     * `POSTGRES_PARTITION_COLUMN_EXISTS` (the key column must be a data column),
+     * `POSTGRES_PARTITION_STRATEGY_VALID` (the strategy must be range / list /
+     * hash), and `POSTGRES_PARTITION_SINGLE_STRATEGY` (a table partitions by one
+     * strategy only).
+     *
+     * @returns Every partition-related violation.
      */
     public partitionViolations(): Violation[] {
-        if (this.definition.partitions.length === 0) {
-            return [];
-        }
-        return [
-            this.violation({
+        const violations: Violation[] = [];
+        const {
+            partitions,
+        } = this.definition;
+
+        for (const duplicate of this.findDuplicates(partitions.map((partition) => partition.name))) {
+            violations.push(this.violation({
                 level: 'error',
-                code: 'PARTITIONS_ALLOWED_FOR_TYPE',
+                code: 'NO_DUPLICATE_PARTITIONS',
                 field: 'partitions',
-                message: 'partitions are not supported for postgres_18 in v0',
-            }),
-        ];
+                message: `duplicate partition key column "${duplicate}"`,
+            }));
+        }
+
+        const strategies = new Set<string>();
+        partitions.forEach((partition: Partition, index: number) => {
+            if (!this.hasColumn(partition.name)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_PARTITION_COLUMN_EXISTS',
+                    field: `partitions[${index}].name`,
+                    message: `partition key column "${partition.name}" is not defined in columns`,
+                }));
+            }
+
+            const strategy = partition.type.trim().toLowerCase();
+            if (STRATEGIES.has(strategy)) {
+                strategies.add(strategy);
+            } else {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_PARTITION_STRATEGY_VALID',
+                    field: `partitions[${index}].type`,
+                    message: `"${partition.type}" is not a valid Postgres partition strategy (range, list, hash)`,
+                }));
+            }
+        });
+
+        if (strategies.size > 1) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'POSTGRES_PARTITION_SINGLE_STRATEGY',
+                field: 'partitions',
+                message: `a partitioned table uses one strategy; found ${[
+                    ...strategies,
+                ].sort().join(', ')}`,
+            }));
+        }
+
+        return violations;
     }
 }

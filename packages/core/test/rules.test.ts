@@ -98,23 +98,130 @@ test('COLUMN_TYPE_VALID fires on an unknown type', () => {
 
 /// Partitions — postgres
 
-test('PARTITIONS_ALLOWED_FOR_TYPE fires for postgres partitions', () => {
+test('a valid Postgres partition produces no partition violations', () => {
     const world = makeWorld([
         makeTable({
             name: 't',
             tableType: 'postgres_18',
             columns: [
-                col('a', 'integer'),
+                col('id', 'integer'),
+                col('created_at', 'timestamptz'),
             ],
             primaryKey: [
-                'a',
+                'id',
             ],
             partitions: [
-                part('a', 'integer'),
+                part('created_at', 'range'),
             ],
         }),
     ]);
-    expect(codes(runSemanticRules(world))).toContain('PARTITIONS_ALLOWED_FOR_TYPE');
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('POSTGRES_PARTITION_COLUMN_EXISTS fires when the key column is missing', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+            partitions: [
+                part('ghost', 'range'),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_PARTITION_COLUMN_EXISTS');
+});
+
+test('POSTGRES_PARTITION_STRATEGY_VALID fires on an unknown strategy', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                col('created_at', 'timestamptz'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+            partitions: [
+                part('created_at', 'weekly'),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_PARTITION_STRATEGY_VALID');
+});
+
+test('NO_DUPLICATE_PARTITIONS fires on a repeated Postgres key column', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                col('created_at', 'timestamptz'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+            partitions: [
+                part('created_at', 'range'),
+                part('created_at', 'range'),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('NO_DUPLICATE_PARTITIONS');
+});
+
+test('POSTGRES_PARTITION_SINGLE_STRATEGY fires when strategies are mixed', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                col('region', 'text'),
+                col('created_at', 'timestamptz'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+            partitions: [
+                part('created_at', 'range'),
+                part('region', 'list'),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_PARTITION_SINGLE_STRATEGY');
+});
+
+test('POSTGRES_PARTITION_SINGLE_STRATEGY ignores invalid strategies', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                col('region', 'text'),
+                col('created_at', 'timestamptz'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+            partitions: [
+                part('created_at', 'range'),
+                part('region', 'weekly'),
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).toContain('POSTGRES_PARTITION_STRATEGY_VALID');
+    expect(result).not.toContain('POSTGRES_PARTITION_SINGLE_STRATEGY');
 });
 
 /// Partitions — duplicates
