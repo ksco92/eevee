@@ -32,6 +32,14 @@ export interface Column {
 
     /** Human description. */
     readonly description: string;
+
+    /**
+     * Whether the column may hold null. Optional: when omitted, nullability is
+     * unspecified and the nullability cross-checks do not fire. `false` marks a
+     * NOT NULL column (Iceberg `required`); `true` marks an explicitly nullable
+     * column.
+     */
+    readonly nullable?: boolean;
 }
 
 /**

@@ -90,6 +90,13 @@ Reviewers reject PRs whose behavior and docs have drifted apart.
   would drift after the next change — run the command for live numbers.
 - Each new rule lands with its own fixture(s): one root that triggers exactly
   that rule's code, plus the JSON Schema update if the change is structural.
+- Each new engine feature — a new field, property, constraint, or rule — must
+  also be **showcased in `samples/`**, not only unit-tested. Add or extend a
+  sample table so the feature appears in the comprehensive feature-showcase root,
+  and keep that root valid (`ok: true`, no new errors). Unit tests prove the rule
+  fires and passes in isolation; the `samples/` entry proves the feature is usable
+  in a realistic dataset and keeps the showcase complete. A feature with tests but
+  no `samples/` coverage is incomplete, and reviewers reject it.
 
 ## Self-validation
 

@@ -8,7 +8,8 @@
         {
             "name": "order_id",
             "type": "long",
-            "description": "Unique order identifier."
+            "description": "Unique order identifier.",
+            "nullable": false
         },
         {
             "name": "customer_id",

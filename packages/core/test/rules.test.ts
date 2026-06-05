@@ -536,6 +536,127 @@ test('NONRAW_REQUIRES_DEPENDS_ON fires when a non-raw table has no dependsOn', (
     expect(codes(runSemanticRules(world))).toContain('NONRAW_REQUIRES_DEPENDS_ON');
 });
 
+/// Column nullability
+
+test('PK_COLUMN_NOT_NULLABLE fires when a primary-key column is declared nullable', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            columns: [
+                col('a', 'int', true),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('PK_COLUMN_NOT_NULLABLE');
+});
+
+test('PK_COLUMN_NOT_NULLABLE passes when the primary-key column is non-nullable', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            columns: [
+                col('a', 'int', false),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('PK_COLUMN_NOT_NULLABLE');
+});
+
+test('PK_COLUMN_NOT_NULLABLE stays silent when nullability is unspecified', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('PK_COLUMN_NOT_NULLABLE');
+});
+
+test('FK_NULLABILITY_CONSISTENT warns when a non-nullable local column allows nulls', () => {
+    const world = makeWorld([
+        makeTable({
+            schema: 'raw',
+            name: 'src',
+            columns: [
+                col('id', 'int'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+        makeTable({
+            name: 'child',
+            isRawData: false,
+            columns: [
+                col('src_id', 'int', false),
+            ],
+            primaryKey: [
+                'src_id',
+            ],
+            dependsOn: [
+                'raw.src',
+            ],
+            foreignKeys: [
+                {
+                    sourceTable: 'raw.src',
+                    sourceColumn: 'id',
+                    localColumn: 'src_id',
+                    allowNulls: true,
+                },
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('FK_NULLABILITY_CONSISTENT');
+});
+
+test('FK_NULLABILITY_CONSISTENT stays silent when a nullable local column allows nulls', () => {
+    const world = makeWorld([
+        makeTable({
+            schema: 'raw',
+            name: 'src',
+            columns: [
+                col('id', 'int'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+        makeTable({
+            name: 'child',
+            isRawData: false,
+            columns: [
+                col('src_id', 'int', true),
+            ],
+            primaryKey: [
+                'src_id',
+            ],
+            dependsOn: [
+                'raw.src',
+            ],
+            foreignKeys: [
+                {
+                    sourceTable: 'raw.src',
+                    sourceColumn: 'id',
+                    localColumn: 'src_id',
+                    allowNulls: true,
+                },
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('FK_NULLABILITY_CONSISTENT');
+});
+
 /// dependsOn resolution
 
 test('DEPENDS_ON_RESOLVES fires for an unknown upstream table', () => {

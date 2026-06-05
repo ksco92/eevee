@@ -8,17 +8,20 @@
         {
             "name": "emp_id",
             "type": "bigint",
-            "description": "Employee identifier."
+            "description": "Employee identifier.",
+            "nullable": false
         },
         {
             "name": "manager_id",
             "type": "bigint",
-            "description": "The employee's manager (references emp_id in this same table)."
+            "description": "The employee's manager (references emp_id in this same table).",
+            "nullable": true
         },
         {
             "name": "full_name",
             "type": "text",
-            "description": "Employee full name."
+            "description": "Employee full name.",
+            "nullable": false
         },
         {
             "name": "email",
