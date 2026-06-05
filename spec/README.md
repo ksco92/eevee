@@ -77,7 +77,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `tableType` | yes | `hive_parquet` \| `iceberg_parquet` \| `postgres_18`. |
 | `isRawData` | yes | `true` marks the top of the pipeline. |
 | `formatVersion` | no | Iceberg only: the table format version (`1`, `2`, or `3`). Other engines ignore it. |
-| `columns` | yes | Non-empty; each has `name`, `type`, `description`, an optional `nullable`, and optional Postgres generation fields (`generated`, `expression`, `expressionColumns`). `type` validated per engine. |
+| `columns` | yes | Non-empty; each has `name`, `type`, `description`, an optional `nullable`, and optional Postgres column attributes (`generated`/`expression`/`expressionColumns`, `identity`, `default`). `type` validated per engine. |
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
 | `partitions` | no | Engine-specific semantics (see below). |
 | `sortOrder` | no | Iceberg only: ordered sort fields (`column`, optional `transform`, `direction`, `nullOrder`). Other engines ignore it. |
@@ -222,8 +222,16 @@ A `postgres_18` column may be a generated column: set `generated` to `stored` or
   primary key.
 
 The `expression` stays opaque; only the declared `expressionColumns` are resolved. The fields are
-engine-specific; non-Postgres engines ignore them. (Column `default` and identity columns, and their
-mutual exclusivity with generation, are a separate later addition.)
+engine-specific; non-Postgres engines ignore them.
+
+A Postgres column may also be an **identity column** (`identity`: `always` or `byDefault`) or carry an
+opaque **`default`**:
+
+- **`POSTGRES_IDENTITY_VALID`** (error) — `identity` is `always` or `byDefault`.
+- **`POSTGRES_IDENTITY_TYPE_INTEGER`** (error) — an identity column's type is an integer type
+  (`smallint`/`integer`/`bigint`).
+- **`POSTGRES_COLUMN_GENERATION_EXCLUSIVE`** (error) — a column has at most one of `generated`,
+  `identity`, or `default` (Postgres makes the three mutually exclusive).
 
 ### Partitions per engine
 

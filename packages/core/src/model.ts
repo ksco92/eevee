@@ -52,6 +52,15 @@ export interface Column {
 
     /** Columns the generation `expression` references (Postgres). */
     readonly expressionColumns?: string[];
+
+    /**
+     * Identity-column kind (Postgres): `always` or `byDefault`. Optional; when
+     * set, the column is `GENERATED … AS IDENTITY`.
+     */
+    readonly identity?: string;
+
+    /** Opaque column default expression (Postgres). */
+    readonly default?: string;
 }
 
 /**

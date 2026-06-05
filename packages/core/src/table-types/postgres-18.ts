@@ -51,6 +51,22 @@ const GENERATED_KINDS: ReadonlySet<string> = new Set([
     'virtual',
 ]);
 
+const IDENTITY_KINDS: ReadonlySet<string> = new Set([
+    'always',
+    'byDefault',
+]);
+
+/// Integer base types an identity column may use.
+const INTEGER_TYPES: ReadonlySet<string> = new Set([
+    'smallint',
+    'int2',
+    'integer',
+    'int',
+    'int4',
+    'bigint',
+    'int8',
+]);
+
 /** Postgres 18 table. */
 export class Postgres18Table extends TableTypeBase {
     /**
@@ -148,7 +164,60 @@ export class Postgres18Table extends TableTypeBase {
             ...this.uniqueConstraintViolations(),
             ...this.checkConstraintViolations(),
             ...this.generatedColumnViolations(),
+            ...this.columnAttributeViolations(),
         ];
+    }
+
+    /**
+     * Validate identity columns, defaults, and the mutual exclusivity between a
+     * column being generated, an identity column, and having a default.
+     *
+     * Emits `POSTGRES_IDENTITY_VALID`, `POSTGRES_IDENTITY_TYPE_INTEGER`, and
+     * `POSTGRES_COLUMN_GENERATION_EXCLUSIVE`.
+     *
+     * @returns Every column-attribute violation.
+     */
+    private columnAttributeViolations(): Violation[] {
+        const violations: Violation[] = [];
+
+        this.definition.columns.forEach((column, index) => {
+            const field = `columns[${index}]`;
+
+            if (column.identity !== undefined) {
+                if (!IDENTITY_KINDS.has(column.identity)) {
+                    violations.push(this.violation({
+                        level: 'error',
+                        code: 'POSTGRES_IDENTITY_VALID',
+                        field: `${field}.identity`,
+                        message: `identity "${column.identity}" must be "always" or "byDefault"`,
+                    }));
+                }
+                if (!INTEGER_TYPES.has(column.type.trim().toLowerCase())) {
+                    violations.push(this.violation({
+                        level: 'error',
+                        code: 'POSTGRES_IDENTITY_TYPE_INTEGER',
+                        field: `${field}.identity`,
+                        message: `identity column "${column.name}" must be an integer type, not "${column.type}"`,
+                    }));
+                }
+            }
+
+            const attributes = [
+                column.generated,
+                column.identity,
+                column.default,
+            ].filter((attribute) => attribute !== undefined);
+            if (attributes.length > 1) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_COLUMN_GENERATION_EXCLUSIVE',
+                    field,
+                    message: `column "${column.name}" may have only one of generated, identity, or default`,
+                }));
+            }
+        });
+
+        return violations;
     }
 
     /**

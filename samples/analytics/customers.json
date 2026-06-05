@@ -8,7 +8,8 @@
         {
             "name": "customer_id",
             "type": "bigint",
-            "description": "Surrogate customer key."
+            "description": "Surrogate customer key.",
+            "identity": "always"
         },
         {
             "name": "source_event_id",
@@ -43,7 +44,8 @@
         {
             "name": "is_active",
             "type": "boolean",
-            "description": "Whether the customer is active."
+            "description": "Whether the customer is active.",
+            "default": "true"
         },
         {
             "name": "small_rank",
