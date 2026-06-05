@@ -17,7 +17,7 @@ node dist/src/cli.js er ../../samples --out er.svg
 | File | Engine | Showcases |
 |---|---|---|
 | `raw/web_events.json` | `hive_parquet` | Hive types incl. nested `array` / `map` / `struct` / `uniontype`, `decimal(p,s)`, `varchar(n)`, `char(n)`; a Hive partition (a new partition column); raw table (no `dependsOn`). |
-| `raw/app_events.json` | `iceberg_parquet` | Iceberg types incl. `decimal(p,s)`, `fixed[L]`, `uuid`, `timestamptz`; **all eight partition transforms** (`identity`, `year`, `month`, `day`, `hour`, `void`, `bucket[N]`, `truncate[W]`), including two transforms on the same source column. |
+| `raw/app_events.json` | `iceberg_parquet` | Iceberg types incl. `decimal(p,s)`, `fixed[L]`, `uuid`, `timestamptz`; an Iceberg `formatVersion`; **all eight partition transforms** (`identity`, `year`, `month`, `day`, `hour`, `void`, `bucket[N]`, `truncate[W]`), including two transforms on the same source column. |
 | `raw/org_chart.json` | `postgres_18` | A **self-referential foreign key** (`manager_id` → its own `emp_id`); per-column `nullable` flags (`false` on the key, `true` on the nullable manager link); a Postgres type sampler. |
 | `analytics/customers.json` | `postgres_18` | A broad Postgres type sampler (exact, parameterized, array `T[]`, multiword like `timestamp with time zone`); Postgres declarative `range` partitioning; cross-schema `dependsOn` + FK to a primary key (no warning, `allowNulls: false`). |
 | `analytics/sessions.json` | `iceberg_parquet` | Iceberg partitions; a non-raw table; a non-PK column (`session_token`) used as a warning FK target. |

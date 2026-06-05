@@ -88,6 +88,12 @@ export interface TableDefinition {
     /** Whether this table is the top of the pipeline. */
     readonly isRawData: boolean;
 
+    /**
+     * Iceberg table format version (1, 2, or 3). Optional and engine-specific:
+     * only the Iceberg engine validates it. Other engines ignore it.
+     */
+    readonly formatVersion?: number;
+
     /** Data columns. */
     readonly columns: Column[];
 

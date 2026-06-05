@@ -4,6 +4,7 @@
     "description": "One row per order placed by a customer.",
     "tableType": "iceberg_parquet",
     "isRawData": false,
+    "formatVersion": 2,
     "columns": [
         {
             "name": "order_id",

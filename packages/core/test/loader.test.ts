@@ -26,9 +26,10 @@ test('loads the example root cleanly', () => {
     expect(world.schemas.get('raw')?.description).not.toBeNull();
     expect(world.tables.get('analytics.orders')?.structurallyValid).toBe(true);
 
-    const orderId = world.tables.get('analytics.orders')?.definition.columns
-        .find((column) => column.name === 'order_id');
+    const orders = world.tables.get('analytics.orders');
+    const orderId = orders?.definition.columns.find((column) => column.name === 'order_id');
     expect(orderId?.nullable).toBe(false);
+    expect(orders?.definition.formatVersion).toBe(2);
 });
 
 test('reports a JSON parse error', () => {

@@ -62,6 +62,10 @@ function asOptionalBoolean(value: unknown): boolean | undefined {
     return typeof value === 'boolean' ? value : undefined;
 }
 
+function asOptionalNumber(value: unknown): number | undefined {
+    return typeof value === 'number' ? value : undefined;
+}
+
 function asStringArray(value: unknown): string[] {
     return asArray(value).filter((item): item is string => typeof item === 'string');
 }
@@ -108,6 +112,7 @@ function normalizeTableDefinition(raw: unknown): TableDefinition {
         description: asString(record.description),
         tableType: asString(record.tableType),
         isRawData: asBoolean(record.isRawData),
+        formatVersion: asOptionalNumber(record.formatVersion),
         columns: normalizeColumns(record.columns),
         primaryKey: asStringArray(record.primaryKey),
         partitions: normalizePartitions(record.partitions),

@@ -38,6 +38,9 @@
         "isRawData": {
             "type": "boolean"
         },
+        "formatVersion": {
+            "type": "integer"
+        },
         "columns": {
             "type": "array",
             "minItems": 1,

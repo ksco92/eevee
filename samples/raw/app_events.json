@@ -4,11 +4,13 @@
     "description": "Raw mobile app events as landed (Iceberg/Parquet).",
     "tableType": "iceberg_parquet",
     "isRawData": true,
+    "formatVersion": 2,
     "columns": [
         {
             "name": "event_id",
             "type": "long",
-            "description": "Unique event identifier."
+            "description": "Unique event identifier.",
+            "nullable": false
         },
         {
             "name": "user_id",

@@ -44,6 +44,7 @@ export interface TableInput {
     name: string;
     tableType?: string;
     isRawData?: boolean;
+    formatVersion?: number;
     columns?: Column[];
     primaryKey?: string[];
     partitions?: Partition[];
@@ -67,6 +68,7 @@ export function makeTable(input: TableInput): TableTypeBase {
             description: `table ${name}`,
             tableType: input.tableType ?? 'hive_parquet',
             isRawData: input.isRawData ?? true,
+            formatVersion: input.formatVersion,
             columns: input.columns ?? [],
             primaryKey: input.primaryKey ?? [],
             partitions: input.partitions ?? [],
