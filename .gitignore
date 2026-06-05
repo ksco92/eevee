@@ -12,6 +12,17 @@ packages/core/**/*.d.ts
 # intentionally uncommitted working plan
 TODO.md
 
+# Python
+.venv
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.coverage
+packages/python/src/flexdataset/_bin/
+
+# compiled standalone binaries
+dist-bin/
+
 .idea
 .DS_Store
 *.log

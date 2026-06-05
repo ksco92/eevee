@@ -6,8 +6,9 @@ there unless noted.
 
 ## Version bumping
 
-Every PR merged to `main` must bump the `version` field in
-`packages/core/package.json` per semver:
+Every PR merged to `main` must bump the `version` field per semver. The two
+publishable packages — `packages/core/package.json` (npm) and
+`packages/python/setup.py` (PyPI) — share one version and bump together:
 
 - **patch** — bug fixes, doc-only changes, internal refactors that don't change
   the public API.
@@ -63,9 +64,11 @@ human-enforced until wired into required status checks.
 
 ## Documentation sync
 
-Before opening a PR, re-read this file and `README.md` and update them if the
-change touches anything they document. The change is not complete until the docs
-match it. Ask, in order:
+**Binding.** Before completing any task that changes code, dependencies,
+conventions, scripts, schema, or workflows, re-read this file end-to-end and
+`README.md`, and update any section that has gone stale. The next reader assumes
+they are current; a PR that changes behavior without syncing the docs is
+incomplete. Ask, in order:
 
 - Does it change a command, path, script, or the quick-start? → update `README.md`.
 - Does it change a convention, policy, the review workflow, or the coverage rule?
@@ -104,6 +107,35 @@ The standard and the validator evolve together; see the "Spec evolution"
 section of `README.md`. Automated proposals (new rules, type-registry entries,
 example or schema updates) are welcome but land only through the normal PR +
 review gates, never directly on `main`.
+
+## Python wrapper
+
+`packages/python` is the `flexdataset` PyPI package: a thin client that shells out to the
+CLI and returns typed results. It follows the maintainer's Python coding guide and
+mirrors the `pikachu` repo's tooling (kept self-contained here rather than via a
+machine-specific `@import`, since this repo is public):
+
+- **Layout:** `setup.py` + `setup.cfg`, `src/` layout, `tests/` mirroring `src/`,
+  a `conftest.py` that blocks real sockets.
+- **Python 3.14.** Native types (`dict`, `list`, `str | None`), `Self` from
+  `typing_extensions`, Sphinx docstrings (`:param:` / `:return:` / `:raises:`).
+- **Lint:** `black`, `isort` (profile black), `flake8` with `flake8-annotations`,
+  `flake8-docstrings`, `flake8-rst-docstrings`; line length 130; `__init__.py`
+  exempt from `D104` / `F401`. Run `scripts/lint.sh`.
+- **Test:** `pytest` + `pytest-cov` + `pytest-socket`, **95% coverage gate**, mocks
+  via `with patch(...)` context managers (never decorators). Run `scripts/test.sh`.
+
+## Distribution and release
+
+- The CLI compiles to a standalone, dependency-free binary with
+  `bun build src/cli.ts --compile` (the wasm Graphviz renderer is bundled in). One
+  bun host cross-compiles every target (linux x64/arm64, macOS x64/arm64, windows x64).
+- `.github/workflows/release.yml` runs on a `v*` tag: it builds the binaries and
+  attaches them to the GitHub release, publishes the npm package, and builds one
+  PyPI wheel per platform (each bundling its binary, via
+  `packages/python/scripts/build_wheels.sh`) plus a pure sdist.
+- Non-core languages consume the CLI; the Python client resolves `FDD_BINARY` or a
+  bundled binary. Validation logic is never reimplemented per language.
 
 ## Planning notes
 

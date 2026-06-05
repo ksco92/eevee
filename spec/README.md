@@ -100,7 +100,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
   a file natively against it.
 - **Layer 2 — semantic**: cross-field and cross-file checks the JSON Schema cannot express
   (PK/FK resolution, `dependsOn` ↔ FK consistency, transform legality, acyclic dependency graph). Run
-  with the `fdd` CLI / `fdd` library.
+  with the `flexdataset` CLI / `flexdataset` library.
 
 Cross-schema references (in `dependsOn` and foreign keys) are allowed.
 

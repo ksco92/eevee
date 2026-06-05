@@ -1,0 +1,12 @@
+black==26.3.1
+isort==8.0.1
+flake8==7.3.0
+flake8-annotations==3.2.0
+flake8-docstrings==1.7.0
+flake8-rst-docstrings==0.4.0
+pytest==9.0.3
+pytest-cov==7.1.0
+pytest-socket==0.7.0
+coverage==7.13.5
+setuptools==82.0.1
+typing_extensions==4.15.0
