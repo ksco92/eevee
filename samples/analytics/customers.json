@@ -139,6 +139,13 @@
     "primaryKey": [
         "customer_id"
     ],
+    "partitions": [
+        {
+            "name": "created_at",
+            "type": "range",
+            "description": "Range-partitioned by creation time (Postgres declarative partitioning)."
+        }
+    ],
     "dependsOn": [
         "raw.web_events"
     ],

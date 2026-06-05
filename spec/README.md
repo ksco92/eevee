@@ -92,7 +92,10 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
   be legal on the source column's type (e.g. `hour` needs a timestamp). Multiple partitions may share
   the same source column with different transforms (e.g. `year(ts)` and `month(ts)`); the
   (source column, transform) pair must be unique. Type and transform names are case-insensitive.
-- **`postgres_18`** — partitioning is **deferred to v0.1**; `partitions` is rejected in v0.
+- **`postgres_18`** — declarative partitioning: each partition entry names an existing key column
+  (`name`) and a strategy (`type`: `range`, `list`, or `hash`, case-insensitive). A table partitions by
+  one strategy over one or more key columns, so all entries must share the same strategy. (Expression
+  keys and sub-partitioning are out of scope.)
 
 ## Validation layers
 
@@ -106,8 +109,6 @@ Cross-schema references (in `dependsOn` and foreign keys) are allowed.
 
 ## Known limitations (v0)
 
-- **Postgres partitioning** is not yet modeled; `partitions` is rejected for `postgres_18`. Planned
-  for v0.1.
 - **Nested Iceberg types** (`list`, `map`, `struct`) are not yet accepted as column types; primitives
   plus `decimal(p,s)` and `fixed[L]` are. Hive nested types (`array`, `map`, `struct`, `uniontype`)
   are supported.
