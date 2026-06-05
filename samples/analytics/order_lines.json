@@ -1,0 +1,78 @@
+{
+    "$schema": "https://raw.githubusercontent.com/ksco92/eevee/main/packages/core/src/schema/table.schema.json",
+    "specVersion": "0",
+    "description": "One row per order line, with a composite key (Hive/Parquet).",
+    "tableType": "hive_parquet",
+    "isRawData": false,
+    "columns": [
+        {
+            "name": "order_id",
+            "type": "bigint",
+            "description": "Order identifier (part of the composite key)."
+        },
+        {
+            "name": "line_no",
+            "type": "int",
+            "description": "Line number within the order (part of the composite key)."
+        },
+        {
+            "name": "customer_id",
+            "type": "bigint",
+            "description": "Customer who placed the order."
+        },
+        {
+            "name": "session_token",
+            "type": "string",
+            "description": "Session the order line came from."
+        },
+        {
+            "name": "qty",
+            "type": "int",
+            "description": "Quantity ordered."
+        },
+        {
+            "name": "price",
+            "type": "decimal(10,2)",
+            "description": "Unit price."
+        },
+        {
+            "name": "notes",
+            "type": "string",
+            "description": "Free-form notes."
+        },
+        {
+            "name": "attributes",
+            "type": "map<string,string>",
+            "description": "Arbitrary line attributes."
+        }
+    ],
+    "primaryKey": [
+        "order_id",
+        "line_no"
+    ],
+    "partitions": [
+        {
+            "name": "order_date",
+            "type": "date",
+            "description": "Daily partition (a new Hive partition column)."
+        }
+    ],
+    "dependsOn": [
+        "analytics.customers",
+        "analytics.sessions"
+    ],
+    "foreignKeys": [
+        {
+            "sourceTable": "analytics.customers",
+            "sourceColumn": "customer_id",
+            "localColumn": "customer_id",
+            "allowNulls": false
+        },
+        {
+            "sourceTable": "analytics.sessions",
+            "sourceColumn": "session_token",
+            "localColumn": "session_token",
+            "allowNulls": true
+        }
+    ]
+}

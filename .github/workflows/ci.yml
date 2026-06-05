@@ -54,12 +54,17 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: node dist/src/cli.js validate ../../examples
+      - run: node dist/src/cli.js validate ../../samples
       - name: Render diagrams and check SVG output
         run: |
           node dist/src/cli.js graph ../../examples --out /tmp/dag.svg
           node dist/src/cli.js er ../../examples --out /tmp/er.svg
+          node dist/src/cli.js graph ../../samples --out /tmp/samples-dag.svg
+          node dist/src/cli.js er ../../samples --out /tmp/samples-er.svg
           grep -q "<svg" /tmp/dag.svg
           grep -q "<svg" /tmp/er.svg
+          grep -q "<svg" /tmp/samples-dag.svg
+          grep -q "<svg" /tmp/samples-er.svg
 
   python:
     # Lint and test the Python wrapper.

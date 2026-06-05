@@ -1,0 +1,153 @@
+{
+    "$schema": "https://raw.githubusercontent.com/ksco92/eevee/main/packages/core/src/schema/table.schema.json",
+    "specVersion": "0",
+    "description": "One row per customer with derived attributes (Postgres 18).",
+    "tableType": "postgres_18",
+    "isRawData": false,
+    "columns": [
+        {
+            "name": "customer_id",
+            "type": "bigint",
+            "description": "Surrogate customer key."
+        },
+        {
+            "name": "source_event_id",
+            "type": "bigint",
+            "description": "Originating raw web event."
+        },
+        {
+            "name": "email",
+            "type": "varchar(320)",
+            "description": "Customer email."
+        },
+        {
+            "name": "display_name",
+            "type": "text",
+            "description": "Display name."
+        },
+        {
+            "name": "lifetime_value",
+            "type": "numeric(14,2)",
+            "description": "Total spend to date."
+        },
+        {
+            "name": "credit_ratio",
+            "type": "decimal(8,3)",
+            "description": "Credit utilisation ratio."
+        },
+        {
+            "name": "balance",
+            "type": "money",
+            "description": "Account balance."
+        },
+        {
+            "name": "is_active",
+            "type": "boolean",
+            "description": "Whether the customer is active."
+        },
+        {
+            "name": "small_rank",
+            "type": "smallint",
+            "description": "Bucketed rank."
+        },
+        {
+            "name": "visit_count",
+            "type": "integer",
+            "description": "Lifetime visit count."
+        },
+        {
+            "name": "created_at",
+            "type": "timestamptz",
+            "description": "Creation time (UTC)."
+        },
+        {
+            "name": "last_seen",
+            "type": "timestamp with time zone",
+            "description": "Last activity (multiword type)."
+        },
+        {
+            "name": "local_time",
+            "type": "timetz",
+            "description": "Preferred local time of day."
+        },
+        {
+            "name": "tz_offset",
+            "type": "interval",
+            "description": "Timezone offset."
+        },
+        {
+            "name": "ip",
+            "type": "inet",
+            "description": "Last-seen IP address."
+        },
+        {
+            "name": "subnet",
+            "type": "cidr",
+            "description": "Home network range."
+        },
+        {
+            "name": "mac",
+            "type": "macaddr",
+            "description": "Device MAC address."
+        },
+        {
+            "name": "uid",
+            "type": "uuid",
+            "description": "External UUID."
+        },
+        {
+            "name": "prefs",
+            "type": "jsonb",
+            "description": "Preference document."
+        },
+        {
+            "name": "profile_doc",
+            "type": "xml",
+            "description": "Legacy XML profile."
+        },
+        {
+            "name": "raw_blob",
+            "type": "bytea",
+            "description": "Opaque blob."
+        },
+        {
+            "name": "flags",
+            "type": "bit(8)",
+            "description": "Feature flag bitfield."
+        },
+        {
+            "name": "bitset",
+            "type": "varbit",
+            "description": "Variable-length bitset."
+        },
+        {
+            "name": "score",
+            "type": "double precision",
+            "description": "Model score."
+        },
+        {
+            "name": "tags",
+            "type": "text[]",
+            "description": "Free-form tags (array type)."
+        },
+        {
+            "name": "scores",
+            "type": "integer[]",
+            "description": "Per-period scores (array type)."
+        }
+    ],
+    "primaryKey": [
+        "customer_id"
+    ],
+    "dependsOn": [
+        "raw.web_events"
+    ],
+    "foreignKeys": [
+        {
+            "sourceTable": "raw.web_events",
+            "sourceColumn": "event_id",
+            "localColumn": "source_event_id",
+            "allowNulls": false
+        }
+    ]
+}

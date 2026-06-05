@@ -52,7 +52,9 @@ node dist/src/cli.js er ../../examples --out er.svg
 ```
 
 The example root in [`examples/`](examples) is a small, valid two-schema dataset (a raw landing zone
-and a curated analytics layer spanning all three engines).
+and a curated analytics layer spanning all three engines). For a comprehensive root that exercises
+every validated construct (all engines, every Iceberg transform, composite and self-referential keys,
+the full type families, cross-schema references), see [`samples/`](samples).
 
 ## Diagrams
 

@@ -1,0 +1,60 @@
+{
+    "$schema": "https://raw.githubusercontent.com/ksco92/eevee/main/packages/core/src/schema/table.schema.json",
+    "specVersion": "0",
+    "description": "Employee org chart with a self-referential manager link (Postgres 18).",
+    "tableType": "postgres_18",
+    "isRawData": true,
+    "columns": [
+        {
+            "name": "emp_id",
+            "type": "bigint",
+            "description": "Employee identifier."
+        },
+        {
+            "name": "manager_id",
+            "type": "bigint",
+            "description": "The employee's manager (references emp_id in this same table)."
+        },
+        {
+            "name": "full_name",
+            "type": "text",
+            "description": "Employee full name."
+        },
+        {
+            "name": "email",
+            "type": "varchar(320)",
+            "description": "Work email."
+        },
+        {
+            "name": "salary",
+            "type": "numeric(12,2)",
+            "description": "Annual salary."
+        },
+        {
+            "name": "hired_on",
+            "type": "date",
+            "description": "Hire date."
+        },
+        {
+            "name": "active",
+            "type": "boolean",
+            "description": "Whether the employee is active."
+        },
+        {
+            "name": "attrs",
+            "type": "jsonb",
+            "description": "Arbitrary attributes."
+        }
+    ],
+    "primaryKey": [
+        "emp_id"
+    ],
+    "foreignKeys": [
+        {
+            "sourceTable": "raw.org_chart",
+            "sourceColumn": "emp_id",
+            "localColumn": "manager_id",
+            "allowNulls": true
+        }
+    ]
+}
