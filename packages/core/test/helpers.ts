@@ -3,6 +3,7 @@
  */
 
 import {
+    Bucketing,
     CheckConstraint,
     Column,
     ForeignKey,
@@ -56,6 +57,7 @@ export interface TableInput {
     indexes?: Index[];
     uniqueConstraints?: UniqueConstraint[];
     checkConstraints?: CheckConstraint[];
+    bucketing?: Bucketing;
     tableProperties?: Record<string, string>;
     dependsOn?: string[];
     foreignKeys?: ForeignKey[];
@@ -85,6 +87,7 @@ export function makeTable(input: TableInput): TableTypeBase {
             indexes: input.indexes ?? [],
             uniqueConstraints: input.uniqueConstraints ?? [],
             checkConstraints: input.checkConstraints ?? [],
+            bucketing: input.bucketing,
             tableProperties: input.tableProperties ?? {},
             dependsOn: input.dependsOn ?? [],
             foreignKeys: input.foreignKeys ?? [],

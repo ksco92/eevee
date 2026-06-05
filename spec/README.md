@@ -81,6 +81,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
 | `partitions` | no | Engine-specific semantics (see below). |
 | `sortOrder` | no | Iceberg only: ordered sort fields (`column`, optional `transform`, `direction`, `nullOrder`). Other engines ignore it. |
+| `bucketing` | no | Hive only: `CLUSTERED BY … INTO N BUCKETS` (`columns`, `bucketCount`, optional `sortedBy`). Other engines ignore it. |
 | `indexes` | no | Postgres only: secondary indexes (`name`, `method`, optional `unique`, `columns`, `include`, `where`). Other engines ignore them. |
 | `uniqueConstraints` | no | Postgres only: table-level UNIQUE constraints (`name`, `columns`, optional `nullsNotDistinct`). Other engines ignore them. |
 | `checkConstraints` | no | Postgres only: CHECK constraints (`name`, opaque `expression`, referenced `columns`). Other engines ignore them. |
@@ -179,6 +180,23 @@ For `iceberg_parquet` the validated keys are:
   `history.expire.max-ref-age-ms` (snapshot retention), `write.metadata.previous-versions-max`.
 - **Bounded integer** (**`ICEBERG_PROPERTY_INT_RANGE`**, error) — `write.parquet.compression-level`
   (1–22).
+
+### Bucketing (Hive)
+
+A `hive_parquet` table may declare `bucketing` (`CLUSTERED BY … INTO N BUCKETS [SORTED BY …]`): a
+non-empty `columns` list of bucket-key columns, a `bucketCount`, and an optional `sortedBy` list of
+intra-bucket sort columns (each a `column` and a `direction`). Checks:
+
+- **`HIVE_BUCKET_NOT_PARTITION_COLUMN`** (error) — a bucket column is not a partition column.
+- **`HIVE_BUCKET_COLUMN_EXISTS`** (error) — each non-partition bucket column exists in `columns`.
+- **`HIVE_BUCKET_NO_DUPLICATE_COLUMNS`** (error) — no bucket column is repeated.
+- **`HIVE_BUCKET_COUNT_POSITIVE`** (error) — `bucketCount` is a positive integer.
+- **`HIVE_SORT_COLUMN_EXISTS`** (error) — each `sortedBy` column exists in `columns`.
+- **`HIVE_SORT_DIRECTION_VALID`** (error) — each `sortedBy` `direction` is `asc` or `desc`
+  (case-insensitive).
+
+`SORTED BY` requires `CLUSTERED BY`, which the nesting enforces (`sortedBy` lives inside `bucketing`).
+The field is engine-specific; non-Hive engines ignore it.
 
 ### Generated columns (Postgres)
 

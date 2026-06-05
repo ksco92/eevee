@@ -12,6 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import {
+    Bucketing,
     CheckConstraint,
     Column,
     ForeignKey,
@@ -159,6 +160,24 @@ function normalizeCheckConstraints(value: unknown): CheckConstraint[] {
     });
 }
 
+function normalizeBucketing(value: unknown): Bucketing | undefined {
+    if (value === null || typeof value !== 'object') {
+        return undefined;
+    }
+    const record = asRecord(value);
+    return {
+        columns: asStringArray(record.columns),
+        bucketCount: typeof record.bucketCount === 'number' ? record.bucketCount : 0,
+        sortedBy: asArray(record.sortedBy).map((raw) => {
+            const sortRecord = asRecord(raw);
+            return {
+                column: asString(sortRecord.column),
+                direction: asString(sortRecord.direction),
+            };
+        }),
+    };
+}
+
 function normalizeStringMap(value: unknown): Record<string, string> {
     const record = asRecord(value);
     const result: Record<string, string> = {};
@@ -200,6 +219,7 @@ function normalizeTableDefinition(raw: unknown): TableDefinition {
         indexes: normalizeIndexes(record.indexes),
         uniqueConstraints: normalizeUniqueConstraints(record.uniqueConstraints),
         checkConstraints: normalizeCheckConstraints(record.checkConstraints),
+        bucketing: normalizeBucketing(record.bucketing),
         tableProperties: normalizeStringMap(record.tableProperties),
         dependsOn: asStringArray(record.dependsOn),
         foreignKeys: normalizeForeignKeys(record.foreignKeys),

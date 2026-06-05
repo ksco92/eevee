@@ -153,6 +153,31 @@ export interface CheckConstraint {
     readonly columns: string[];
 }
 
+/** A sort column within a Hive bucketing spec. */
+export interface BucketSort {
+    /** Column to sort each bucket by. */
+    readonly column: string;
+
+    /** Sort direction (`asc` or `desc`, case-insensitive). */
+    readonly direction: string;
+}
+
+/**
+ * Hive bucketing (`CLUSTERED BY … INTO N BUCKETS [SORTED BY …]`). `columns` are
+ * the bucket-key columns, `bucketCount` the number of buckets, and `sortedBy`
+ * the optional intra-bucket sort.
+ */
+export interface Bucketing {
+    /** Bucket-key columns. */
+    readonly columns: string[];
+
+    /** Number of buckets. */
+    readonly bucketCount: number;
+
+    /** Optional intra-bucket sort columns. */
+    readonly sortedBy: BucketSort[];
+}
+
 /** A foreign-key reference to a column in another table. */
 export interface ForeignKey {
     /** Referenced table in `schema.table` format. */
@@ -208,6 +233,9 @@ export interface TableDefinition {
 
     /** CHECK constraints (Postgres). Optional; other engines ignore them. */
     readonly checkConstraints: CheckConstraint[];
+
+    /** Hive bucketing spec. Optional; other engines ignore it. */
+    readonly bucketing?: Bucketing;
 
     /**
      * Engine table properties as a string→string map (e.g. Iceberg

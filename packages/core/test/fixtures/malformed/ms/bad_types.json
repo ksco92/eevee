@@ -20,6 +20,12 @@
         "good.key": "ok",
         "bad.key": 5
     },
+    "bucketing": {
+        "columns": [
+            "a"
+        ],
+        "bucketCount": "lots"
+    },
     "dependsOn": [
         2,
         "x.y"
