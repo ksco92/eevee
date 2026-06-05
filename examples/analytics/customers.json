@@ -29,6 +29,23 @@
     "primaryKey": [
         "customer_id"
     ],
+    "indexes": [
+        {
+            "name": "idx_customers_email",
+            "method": "btree",
+            "unique": true,
+            "columns": [
+                {
+                    "name": "email",
+                    "sort": "asc",
+                    "nulls": "last"
+                }
+            ],
+            "include": [
+                "is_active"
+            ]
+        }
+    ],
     "dependsOn": [
         "raw.customers_raw"
     ],

@@ -33,6 +33,14 @@ test('loads the example root cleanly', () => {
     expect(orders?.definition.sortOrder).toHaveLength(2);
     expect(orders?.definition.sortOrder[0].transform).toBeUndefined();
     expect(orders?.definition.sortOrder[1].transform).toBe('day');
+
+    const customers = world.tables.get('analytics.customers');
+    expect(customers?.definition.indexes).toHaveLength(1);
+    expect(customers?.definition.indexes[0].unique).toBe(true);
+    expect(customers?.definition.indexes[0].columns[0].sort).toBe('asc');
+    expect(customers?.definition.indexes[0].include).toEqual([
+        'is_active',
+    ]);
 });
 
 test('reports a JSON parse error', () => {

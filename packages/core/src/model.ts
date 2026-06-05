@@ -78,6 +78,42 @@ export interface SortField {
     readonly nullOrder: string;
 }
 
+/** A single key column within an index, with optional ordering modifiers. */
+export interface IndexColumn {
+    /** Indexed column name. */
+    readonly name: string;
+
+    /** Optional sort order (`asc` or `desc`). */
+    readonly sort?: string;
+
+    /** Optional null ordering (`first` or `last`). */
+    readonly nulls?: string;
+}
+
+/**
+ * A secondary index (e.g. Postgres). `columns` are the key columns; `include`
+ * are non-key covering columns; `where` is an opaque partial-index predicate.
+ */
+export interface Index {
+    /** Index name (unique within the table). */
+    readonly name: string;
+
+    /** Access method (e.g. `btree`, `hash`, `gin`). */
+    readonly method: string;
+
+    /** Whether the index enforces uniqueness. */
+    readonly unique?: boolean;
+
+    /** Key columns. */
+    readonly columns: IndexColumn[];
+
+    /** Non-key covering columns. */
+    readonly include: string[];
+
+    /** Optional partial-index predicate (opaque). */
+    readonly where?: string;
+}
+
 /** A foreign-key reference to a column in another table. */
 export interface ForeignKey {
     /** Referenced table in `schema.table` format. */
@@ -124,6 +160,9 @@ export interface TableDefinition {
 
     /** Iceberg sort order (ordered sort fields). Optional; other engines ignore it. */
     readonly sortOrder: SortField[];
+
+    /** Secondary indexes (Postgres). Optional; other engines ignore them. */
+    readonly indexes: Index[];
 
     /**
      * Engine table properties as a string→string map (e.g. Iceberg

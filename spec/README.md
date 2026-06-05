@@ -81,6 +81,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
 | `partitions` | no | Engine-specific semantics (see below). |
 | `sortOrder` | no | Iceberg only: ordered sort fields (`column`, optional `transform`, `direction`, `nullOrder`). Other engines ignore it. |
+| `indexes` | no | Postgres only: secondary indexes (`name`, `method`, optional `unique`, `columns`, `include`, `where`). Other engines ignore them. |
 | `tableProperties` | no | String→string map of engine settings. Only keys with a closed legal domain are validated per engine (see below); unknown keys pass through. |
 | `dependsOn` | conditionally | Required & non-empty when `isRawData` is `false`. Entries are `schema.table`. |
 | `foreignKeys` | no | Each: `sourceTable` (`schema.table`), `sourceColumn`, `localColumn`, `allowNulls`. |
@@ -118,6 +119,24 @@ defaulting to identity), a `direction` (`asc` or `desc`), and a `nullOrder` (`nu
   transform and an explicit `identity` are the same field.
 
 The field is engine-specific; non-Iceberg engines ignore it.
+
+### Indexes (Postgres)
+
+A `postgres_18` table may declare `indexes`: secondary indexes, each with a `name`, an access
+`method`, optional `unique`, a non-empty `columns` list (each a key column with optional `sort` and
+`nulls`), optional non-key `include` columns, and an opaque partial-index `where`. Checks:
+
+- **`POSTGRES_INDEX_NAME_UNIQUE`** (error) — index names are unique within the table.
+- **`POSTGRES_INDEX_METHOD_VALID`** (error) — `method` is one of
+  `btree`/`hash`/`gist`/`spgist`/`gin`/`brin`.
+- **`POSTGRES_INDEX_COLUMN_EXISTS`** (error) — every key and `include` column exists in `columns`.
+- **`POSTGRES_INDEX_NO_DUPLICATE_COLUMNS`** (error) — no key column or `include` column is repeated,
+  and `include` columns are disjoint from key columns.
+- **`POSTGRES_INDEX_UNIQUE_BTREE_ONLY`** (error) — a `unique` index must use the `btree` method.
+- **`POSTGRES_INDEX_SORT_VALID`** (error) — a key column's `sort` is `asc` or `desc`.
+- **`POSTGRES_INDEX_NULLS_VALID`** (error) — a key column's `nulls` is `first` or `last`.
+
+The field is engine-specific; non-Postgres engines ignore it.
 
 ### Table properties
 
