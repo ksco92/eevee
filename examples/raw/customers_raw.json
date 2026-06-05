@@ -42,5 +42,22 @@
                 "direction": "asc"
             }
         ]
+    },
+    "skewedBy": {
+        "columns": [
+            "email"
+        ],
+        "on": [
+            [
+                "vip@example.com"
+            ]
+        ],
+        "storedAsDirectories": false
+    },
+    "storage": {
+        "storedAs": "parquet",
+        "serdeProperties": {
+            "parquet.column.index.access": "false"
+        }
     }
 }

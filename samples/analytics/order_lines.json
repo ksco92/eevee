@@ -74,6 +74,26 @@
         "transactional": "true",
         "transactional_properties": "insert_only"
     },
+    "skewedBy": {
+        "columns": [
+            "customer_id"
+        ],
+        "on": [
+            [
+                "1001"
+            ],
+            [
+                "1002"
+            ]
+        ],
+        "storedAsDirectories": false
+    },
+    "storage": {
+        "storedAs": "parquet",
+        "serdeProperties": {
+            "parquet.column.index.access": "false"
+        }
+    },
     "dependsOn": [
         "analytics.customers",
         "analytics.sessions"

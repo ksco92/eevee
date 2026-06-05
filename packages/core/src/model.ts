@@ -220,6 +220,31 @@ export interface ExclusionConstraint {
     readonly elements: ExclusionElement[];
 }
 
+/**
+ * Hive skew optimization (`SKEWED BY (cols) ON ((values), …)`). `columns` are
+ * the skewed columns; `on` is the list of high-frequency value tuples, each of
+ * which must have one value per skewed column.
+ */
+export interface SkewedBy {
+    /** Skewed columns. */
+    readonly columns: string[];
+
+    /** High-frequency value tuples (one value per skewed column). */
+    readonly on: string[][];
+
+    /** Whether skewed values are stored as separate directories (list bucketing). */
+    readonly storedAsDirectories?: boolean;
+}
+
+/** Hive storage format and SerDe properties. */
+export interface HiveStorage {
+    /** Stored-as file format (e.g. `parquet`). */
+    readonly storedAs?: string;
+
+    /** Free-form SerDe properties. */
+    readonly serdeProperties: Record<string, string>;
+}
+
 /** A foreign-key reference to a column in another table. */
 export interface ForeignKey {
     /** Referenced table in `schema.table` format. */
@@ -284,6 +309,12 @@ export interface TableDefinition {
 
     /** Hive bucketing spec. Optional; other engines ignore it. */
     readonly bucketing?: Bucketing;
+
+    /** Hive skew spec. Optional; other engines ignore it. */
+    readonly skewedBy?: SkewedBy;
+
+    /** Hive storage format / SerDe spec. Optional; other engines ignore it. */
+    readonly storage?: HiveStorage;
 
     /**
      * Engine table properties as a string→string map (e.g. Iceberg

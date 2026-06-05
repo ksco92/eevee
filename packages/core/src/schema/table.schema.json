@@ -102,6 +102,12 @@
         "bucketing": {
             "$ref": "#/definitions/bucketing"
         },
+        "skewedBy": {
+            "$ref": "#/definitions/skewedBy"
+        },
+        "storage": {
+            "$ref": "#/definitions/hiveStorage"
+        },
         "tableProperties": {
             "type": "object",
             "additionalProperties": {
@@ -265,6 +271,53 @@
                 "operator": {
                     "type": "string",
                     "minLength": 1
+                }
+            }
+        },
+        "skewedBy": {
+            "type": "object",
+            "required": [
+                "columns",
+                "on"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "columns": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "on": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1
+                        }
+                    }
+                },
+                "storedAsDirectories": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "hiveStorage": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "storedAs": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "serdeProperties": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 }
             }
         },

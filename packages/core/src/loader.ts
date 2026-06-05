@@ -17,9 +17,11 @@ import {
     Column,
     ExclusionConstraint,
     ForeignKey,
+    HiveStorage,
     Index,
     Partition,
     SchemaDescription,
+    SkewedBy,
     SortField,
     TableDefinition,
     UniqueConstraint,
@@ -201,6 +203,29 @@ function normalizeBucketing(value: unknown): Bucketing | undefined {
     };
 }
 
+function normalizeSkewedBy(value: unknown): SkewedBy | undefined {
+    if (value === null || typeof value !== 'object') {
+        return undefined;
+    }
+    const record = asRecord(value);
+    return {
+        columns: asStringArray(record.columns),
+        on: asArray(record.on).map((tuple) => asStringArray(tuple)),
+        storedAsDirectories: asOptionalBoolean(record.storedAsDirectories),
+    };
+}
+
+function normalizeHiveStorage(value: unknown): HiveStorage | undefined {
+    if (value === null || typeof value !== 'object') {
+        return undefined;
+    }
+    const record = asRecord(value);
+    return {
+        storedAs: asOptionalString(record.storedAs),
+        serdeProperties: normalizeStringMap(record.serdeProperties),
+    };
+}
+
 function normalizeStringMap(value: unknown): Record<string, string> {
     const record = asRecord(value);
     const result: Record<string, string> = {};
@@ -245,6 +270,8 @@ function normalizeTableDefinition(raw: unknown): TableDefinition {
         checkConstraints: normalizeCheckConstraints(record.checkConstraints),
         exclusionConstraints: normalizeExclusionConstraints(record.exclusionConstraints),
         bucketing: normalizeBucketing(record.bucketing),
+        skewedBy: normalizeSkewedBy(record.skewedBy),
+        storage: normalizeHiveStorage(record.storage),
         tableProperties: normalizeStringMap(record.tableProperties),
         dependsOn: asStringArray(record.dependsOn),
         foreignKeys: normalizeForeignKeys(record.foreignKeys),
