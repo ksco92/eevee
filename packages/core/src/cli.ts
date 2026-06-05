@@ -25,7 +25,7 @@ import {
     renderDot, 
 } from './diagram/render';
 import {
-    ValidationResult, Violation, World, 
+    ValidationResult, Violation,
 } from './model';
 
 const USAGE = `fdd — Flexible Dataset Definition validator
@@ -135,24 +135,21 @@ async function runDiagram(command: 'graph' | 'er', rest: string[]): Promise<numb
         return 1;
     }
 
-    let world: World;
     try {
-        world = loadRoot(root).world;
+        const world = loadRoot(root).world;
+        const dot = command === 'graph' ? buildDagDot(world) : buildErDot(world);
+        const svg = await renderDot(dot);
+        if (out) {
+            fs.writeFileSync(out, svg, 'utf-8');
+            console.error(`wrote ${out}`);
+        } else {
+            console.log(svg);
+        }
+        return 0;
     } catch (error) {
         console.error((error as Error).message);
         return 1;
     }
-
-    const dot = command === 'graph' ? buildDagDot(world) : buildErDot(world);
-    const svg = await renderDot(dot);
-
-    if (out) {
-        fs.writeFileSync(out, svg, 'utf-8');
-        console.error(`wrote ${out}`);
-    } else {
-        console.log(svg);
-    }
-    return 0;
 }
 
 async function main(argv: string[]): Promise<number> {
@@ -181,4 +178,7 @@ async function main(argv: string[]): Promise<number> {
 
 main(process.argv).then((code) => {
     process.exit(code);
+}).catch((error) => {
+    console.error((error as Error).message);
+    process.exit(1);
 });

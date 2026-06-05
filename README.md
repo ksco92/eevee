@@ -44,8 +44,8 @@ is needed):
 - `fdd er <root>` — the **entity-relationship diagram**: each table with its columns (primary-key
   columns marked `PK`) and a foreign-key edge to each referenced table.
 
-Both write to stdout, or to a file with `--out <file.svg>`. Output is deterministic, so a committed SVG
-diffs cleanly when the dataset changes.
+Both write the SVG to stdout, or to a file with `--out <file.svg>` (in which case a short confirmation
+goes to stderr). Output is deterministic, so a committed SVG diffs cleanly when the dataset changes.
 
 ## Development
 
