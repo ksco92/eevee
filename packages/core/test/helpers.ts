@@ -8,8 +8,10 @@ import {
     Column,
     ExclusionConstraint,
     ForeignKey,
+    HiveStorage,
     Index,
     Partition,
+    SkewedBy,
     SortField,
     UniqueConstraint,
     Violation,
@@ -61,6 +63,8 @@ export interface TableInput {
     checkConstraints?: CheckConstraint[];
     exclusionConstraints?: ExclusionConstraint[];
     bucketing?: Bucketing;
+    skewedBy?: SkewedBy;
+    storage?: HiveStorage;
     tableProperties?: Record<string, string>;
     dependsOn?: string[];
     foreignKeys?: ForeignKey[];
@@ -93,6 +97,8 @@ export function makeTable(input: TableInput): TableTypeBase {
             checkConstraints: input.checkConstraints ?? [],
             exclusionConstraints: input.exclusionConstraints ?? [],
             bucketing: input.bucketing,
+            skewedBy: input.skewedBy,
+            storage: input.storage,
             tableProperties: input.tableProperties ?? {},
             dependsOn: input.dependsOn ?? [],
             foreignKeys: input.foreignKeys ?? [],

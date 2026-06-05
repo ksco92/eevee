@@ -21,6 +21,17 @@ const SORT_DIRECTIONS: ReadonlySet<string> = new Set([
     'desc',
 ]);
 
+/// Hive file formats accepted by `STORED AS`.
+const STORAGE_FORMATS: ReadonlySet<string> = new Set([
+    'sequencefile',
+    'textfile',
+    'rcfile',
+    'orc',
+    'parquet',
+    'avro',
+    'jsonfile',
+]);
+
 /// Hive table-property keys whose value must come from a closed set (compared
 /// case-insensitively, matching HiveQL).
 const ENUM_PROPERTIES: Record<string, readonly string[]> = {
@@ -114,7 +125,104 @@ export class HiveParquetTable extends TableTypeBase {
         return [
             ...this.bucketingViolations(),
             ...this.tablePropertyViolations(),
+            ...this.skewedByViolations(),
+            ...this.storageViolations(),
         ];
+    }
+
+    /**
+     * Validate the skew spec.
+     *
+     * Emits `HIVE_SKEW_COLUMN_EXISTS`, `HIVE_SKEW_NO_DUPLICATE_COLUMNS`, and
+     * `HIVE_SKEW_VALUE_ARITY` (each `on` tuple has one value per skewed column).
+     *
+     * @returns Every skew-related violation.
+     */
+    private skewedByViolations(): Violation[] {
+        const {
+            skewedBy,
+        } = this.definition;
+        if (skewedBy === undefined) {
+            return [];
+        }
+
+        const violations: Violation[] = [];
+
+        for (const duplicate of this.findDuplicates(skewedBy.columns)) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'HIVE_SKEW_NO_DUPLICATE_COLUMNS',
+                field: 'skewedBy.columns',
+                message: `skew lists column "${duplicate}" more than once`,
+            }));
+        }
+
+        skewedBy.columns.forEach((column, index) => {
+            if (!this.hasColumn(column)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'HIVE_SKEW_COLUMN_EXISTS',
+                    field: `skewedBy.columns[${index}]`,
+                    message: `skew column "${column}" is not defined in columns`,
+                }));
+            }
+        });
+
+        skewedBy.on.forEach((tuple, index) => {
+            if (tuple.length !== skewedBy.columns.length) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'HIVE_SKEW_VALUE_ARITY',
+                    field: `skewedBy.on[${index}]`,
+                    message: `skew value tuple has ${tuple.length} value(s) but there are `
+                        + `${skewedBy.columns.length} skew column(s)`,
+                }));
+            }
+        });
+
+        return violations;
+    }
+
+    /**
+     * Validate the storage format.
+     *
+     * Emits `HIVE_STORAGE_FORMAT_VALID` (a known Hive format) and
+     * `HIVE_STORAGE_FORMAT_PARQUET` (a `hive_parquet` table must use Parquet).
+     *
+     * @returns Every storage-related violation.
+     */
+    private storageViolations(): Violation[] {
+        const {
+            storage,
+        } = this.definition;
+        if (storage === undefined || storage.storedAs === undefined) {
+            return [];
+        }
+
+        const format = storage.storedAs.trim().toLowerCase();
+        if (!STORAGE_FORMATS.has(format)) {
+            return [
+                this.violation({
+                    level: 'error',
+                    code: 'HIVE_STORAGE_FORMAT_VALID',
+                    field: 'storage.storedAs',
+                    message: `storedAs "${storage.storedAs}" must be one of: ${[
+                        ...STORAGE_FORMATS,
+                    ].join(', ')}`,
+                }),
+            ];
+        }
+        if (format !== 'parquet') {
+            return [
+                this.violation({
+                    level: 'error',
+                    code: 'HIVE_STORAGE_FORMAT_PARQUET',
+                    field: 'storage.storedAs',
+                    message: `a hive_parquet table must use Parquet storage, not "${storage.storedAs}"`,
+                }),
+            ];
+        }
+        return [];
     }
 
     /**

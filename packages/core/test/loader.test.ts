@@ -72,6 +72,13 @@ test('loads the example root cleanly', () => {
         'id',
     ]);
     expect(customersRaw?.definition.bucketing?.sortedBy[0].direction).toBe('asc');
+    expect(customersRaw?.definition.skewedBy?.columns).toEqual([
+        'email',
+    ]);
+    expect(customersRaw?.definition.skewedBy?.on[0]).toEqual([
+        'vip@example.com',
+    ]);
+    expect(customersRaw?.definition.storage?.storedAs).toBe('parquet');
 });
 
 test('reports a JSON parse error', () => {

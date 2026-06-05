@@ -983,6 +983,239 @@ test('Hive table properties are ignored for non-Hive engines', () => {
     expect(result).not.toContain('HIVE_FULL_ACID_REQUIRES_ORC');
 });
 
+/// Hive skew and storage
+
+test('a valid Hive skew spec produces no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('country', 'string'),
+                col('device', 'string'),
+            ],
+            primaryKey: [
+                'country',
+            ],
+            skewedBy: {
+                columns: [
+                    'country',
+                    'device',
+                ],
+                on: [
+                    [
+                        'US',
+                        'ios',
+                    ],
+                    [
+                        'US',
+                        'android',
+                    ],
+                ],
+                storedAsDirectories: true,
+            },
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('HIVE_SKEW_COLUMN_EXISTS fires when a skew column is missing', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            skewedBy: {
+                columns: [
+                    'ghost',
+                ],
+                on: [
+                    [
+                        'x',
+                    ],
+                ],
+            },
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('HIVE_SKEW_COLUMN_EXISTS');
+});
+
+test('HIVE_SKEW_NO_DUPLICATE_COLUMNS fires on a repeated skew column', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            skewedBy: {
+                columns: [
+                    'a',
+                    'a',
+                ],
+                on: [
+                    [
+                        'x',
+                        'y',
+                    ],
+                ],
+            },
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('HIVE_SKEW_NO_DUPLICATE_COLUMNS');
+});
+
+test('HIVE_SKEW_VALUE_ARITY fires when a value tuple length does not match the column count', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+                col('b', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            skewedBy: {
+                columns: [
+                    'a',
+                    'b',
+                ],
+                on: [
+                    [
+                        'x',
+                    ],
+                ],
+            },
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('HIVE_SKEW_VALUE_ARITY');
+});
+
+test('a valid Hive storage spec produces no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            storage: {
+                storedAs: 'PARQUET',
+                serdeProperties: {
+                    'parquet.column.index.access': 'false',
+                },
+            },
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('HIVE_STORAGE_FORMAT_VALID fires on an unknown storage format', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            storage: {
+                storedAs: 'parquett',
+                serdeProperties: {},
+            },
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).toContain('HIVE_STORAGE_FORMAT_VALID');
+    expect(result).not.toContain('HIVE_STORAGE_FORMAT_PARQUET');
+});
+
+test('HIVE_STORAGE_FORMAT_PARQUET fires on a known non-Parquet format', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            storage: {
+                storedAs: 'orc',
+                serdeProperties: {},
+            },
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('HIVE_STORAGE_FORMAT_PARQUET');
+});
+
+test('a storage spec without storedAs produces no violation', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            storage: {
+                serdeProperties: {
+                    'some.key': 'value',
+                },
+            },
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('HIVE_STORAGE_FORMAT_VALID');
+    expect(result).not.toContain('HIVE_STORAGE_FORMAT_PARQUET');
+});
+
+test('skew and storage are ignored for non-Hive engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            columns: [
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            skewedBy: {
+                columns: [
+                    'ghost',
+                ],
+                on: [],
+            },
+            storage: {
+                storedAs: 'orc',
+                serdeProperties: {},
+            },
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('HIVE_SKEW_COLUMN_EXISTS');
+    expect(result).not.toContain('HIVE_STORAGE_FORMAT_PARQUET');
+});
+
 /// Hive bucketing
 
 test('a valid Hive bucketing spec produces no violations', () => {

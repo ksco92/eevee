@@ -83,6 +83,8 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `sortOrder` | no | Iceberg only: ordered sort fields (`column`, optional `transform`, `direction`, `nullOrder`). Other engines ignore it. |
 | `identifierFields` | no | Iceberg only: the row-identity / equality-delete key columns. Other engines ignore them. |
 | `bucketing` | no | Hive only: `CLUSTERED BY … INTO N BUCKETS` (`columns`, `bucketCount`, optional `sortedBy`). Other engines ignore it. |
+| `skewedBy` | no | Hive only: `SKEWED BY (cols) ON ((values), …)` (`columns`, `on`, optional `storedAsDirectories`). Other engines ignore it. |
+| `storage` | no | Hive only: `STORED AS` format + `serdeProperties`. Other engines ignore it. |
 | `indexes` | no | Postgres only: secondary indexes (`name`, `method`, optional `unique`, `columns`, `include`, `where`). Other engines ignore them. |
 | `uniqueConstraints` | no | Postgres only: table-level UNIQUE constraints (`name`, `columns`, optional `nullsNotDistinct`). Other engines ignore them. |
 | `checkConstraints` | no | Postgres only: CHECK constraints (`name`, opaque `expression`, referenced `columns`). Other engines ignore them. |
@@ -239,6 +241,28 @@ intra-bucket sort columns (each a `column` and a `direction`). Checks:
 
 `SORTED BY` requires `CLUSTERED BY`, which the nesting enforces (`sortedBy` lives inside `bucketing`).
 The field is engine-specific; non-Hive engines ignore it.
+
+### Skew (Hive)
+
+A `hive_parquet` table may declare `skewedBy` (`SKEWED BY (cols) ON ((values), …)`): a non-empty
+`columns` list, an `on` list of high-frequency value tuples, and an optional `storedAsDirectories`.
+Checks:
+
+- **`HIVE_SKEW_COLUMN_EXISTS`** (error) — each skew column exists in `columns`.
+- **`HIVE_SKEW_NO_DUPLICATE_COLUMNS`** (error) — no skew column is repeated.
+- **`HIVE_SKEW_VALUE_ARITY`** (error) — each `on` tuple has one value per skew column.
+
+### Storage format (Hive)
+
+A `hive_parquet` table may declare `storage` (`storedAs` plus free-form `serdeProperties`). Checks:
+
+- **`HIVE_STORAGE_FORMAT_VALID`** (error) — `storedAs` is a known Hive format
+  (`sequencefile`/`textfile`/`rcfile`/`orc`/`parquet`/`avro`/`jsonfile`).
+- **`HIVE_STORAGE_FORMAT_PARQUET`** (error) — a `hive_parquet` table must use Parquet storage, so a
+  known-but-non-Parquet `storedAs` (e.g. `orc`) is rejected.
+
+`serdeProperties` is an unvalidated passthrough. Both fields are engine-specific; non-Hive engines
+ignore them.
 
 ### Generated columns (Postgres)
 
