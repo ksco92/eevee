@@ -57,6 +57,18 @@
             "description": "Daily partition (a new Hive partition column)."
         }
     ],
+    "bucketing": {
+        "columns": [
+            "customer_id"
+        ],
+        "bucketCount": 16,
+        "sortedBy": [
+            {
+                "column": "order_id",
+                "direction": "ASC"
+            }
+        ]
+    },
     "dependsOn": [
         "analytics.customers",
         "analytics.sessions"

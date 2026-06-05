@@ -16,6 +16,11 @@ import {
     isValidHiveType,
 } from '../types';
 
+const SORT_DIRECTIONS: ReadonlySet<string> = new Set([
+    'asc',
+    'desc',
+]);
+
 /** Hive (parquet) table. */
 export class HiveParquetTable extends TableTypeBase {
     /**
@@ -71,6 +76,93 @@ export class HiveParquetTable extends TableTypeBase {
                     code: 'HIVE_PARTITION_TYPE_VALID',
                     field: `partitions[${index}].type`,
                     message: `"${partition.type}" is not a valid Hive partition type`,
+                }));
+            }
+        });
+
+        return violations;
+    }
+
+    /**
+     * Hive engine-specific rules: bucketing.
+     *
+     * @returns Every engine-specific violation.
+     */
+    public engineSpecificViolations(): Violation[] {
+        return this.bucketingViolations();
+    }
+
+    /**
+     * Validate the bucketing spec.
+     *
+     * Emits `HIVE_BUCKET_NOT_PARTITION_COLUMN`, `HIVE_BUCKET_COLUMN_EXISTS`,
+     * `HIVE_BUCKET_NO_DUPLICATE_COLUMNS`, `HIVE_BUCKET_COUNT_POSITIVE`,
+     * `HIVE_SORT_COLUMN_EXISTS`, and `HIVE_SORT_DIRECTION_VALID`.
+     *
+     * @returns Every bucketing-related violation.
+     */
+    private bucketingViolations(): Violation[] {
+        const {
+            bucketing,
+        } = this.definition;
+        if (bucketing === undefined) {
+            return [];
+        }
+
+        const violations: Violation[] = [];
+        const partitionNames = new Set(this.definition.partitions.map((partition) => partition.name));
+
+        for (const duplicate of this.findDuplicates(bucketing.columns)) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'HIVE_BUCKET_NO_DUPLICATE_COLUMNS',
+                field: 'bucketing.columns',
+                message: `bucketing lists column "${duplicate}" more than once`,
+            }));
+        }
+
+        bucketing.columns.forEach((column, index) => {
+            if (partitionNames.has(column)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'HIVE_BUCKET_NOT_PARTITION_COLUMN',
+                    field: `bucketing.columns[${index}]`,
+                    message: `bucketing column "${column}" must not be a partition column`,
+                }));
+            } else if (!this.hasColumn(column)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'HIVE_BUCKET_COLUMN_EXISTS',
+                    field: `bucketing.columns[${index}]`,
+                    message: `bucketing column "${column}" is not defined in columns`,
+                }));
+            }
+        });
+
+        if (!Number.isInteger(bucketing.bucketCount) || bucketing.bucketCount <= 0) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'HIVE_BUCKET_COUNT_POSITIVE',
+                field: 'bucketing.bucketCount',
+                message: `bucketCount "${bucketing.bucketCount}" must be a positive integer`,
+            }));
+        }
+
+        bucketing.sortedBy.forEach((sort, index) => {
+            if (!this.hasColumn(sort.column)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'HIVE_SORT_COLUMN_EXISTS',
+                    field: `bucketing.sortedBy[${index}].column`,
+                    message: `sort column "${sort.column}" is not defined in columns`,
+                }));
+            }
+            if (!SORT_DIRECTIONS.has(sort.direction.trim().toLowerCase())) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'HIVE_SORT_DIRECTION_VALID',
+                    field: `bucketing.sortedBy[${index}].direction`,
+                    message: `sort direction "${sort.direction}" must be "asc" or "desc"`,
                 }));
             }
         });

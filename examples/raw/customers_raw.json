@@ -30,5 +30,17 @@
             "type": "date",
             "description": "Daily ingestion partition."
         }
-    ]
+    ],
+    "bucketing": {
+        "columns": [
+            "id"
+        ],
+        "bucketCount": 16,
+        "sortedBy": [
+            {
+                "column": "email",
+                "direction": "asc"
+            }
+        ]
+    }
 }

@@ -54,6 +54,13 @@ test('loads the example root cleanly', () => {
     expect(generatedColumn?.expressionColumns).toEqual([
         'lifetime_value',
     ]);
+
+    const customersRaw = world.tables.get('raw.customers_raw');
+    expect(customersRaw?.definition.bucketing?.bucketCount).toBe(16);
+    expect(customersRaw?.definition.bucketing?.columns).toEqual([
+        'id',
+    ]);
+    expect(customersRaw?.definition.bucketing?.sortedBy[0].direction).toBe('asc');
 });
 
 test('reports a JSON parse error', () => {
@@ -86,6 +93,7 @@ test('normalizes a structurally invalid table without throwing', () => {
     expect(table?.definition.tableProperties).toEqual({
         'good.key': 'ok',
     });
+    expect(table?.definition.bucketing?.bucketCount).toBe(0);
     expect(table?.definition.primaryKey).toEqual([
         'a',
     ]);

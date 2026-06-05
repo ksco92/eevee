@@ -875,6 +875,267 @@ test('indexes are ignored for non-Postgres engines', () => {
     expect(result).not.toContain('POSTGRES_INDEX_COLUMN_EXISTS');
 });
 
+/// Hive bucketing
+
+test('a valid Hive bucketing spec produces no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('user_id', 'bigint'),
+                col('event_ts', 'timestamp'),
+            ],
+            primaryKey: [
+                'user_id',
+            ],
+            bucketing: {
+                columns: [
+                    'user_id',
+                ],
+                bucketCount: 32,
+                sortedBy: [
+                    {
+                        column: 'event_ts',
+                        direction: 'desc',
+                    },
+                ],
+            },
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('HIVE_BUCKET_COLUMN_EXISTS fires when a bucket column is missing', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            bucketing: {
+                columns: [
+                    'ghost',
+                ],
+                bucketCount: 8,
+                sortedBy: [],
+            },
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('HIVE_BUCKET_COLUMN_EXISTS');
+});
+
+test('HIVE_BUCKET_NOT_PARTITION_COLUMN fires when a bucket column is a partition column', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('load_date', 'date'),
+            ],
+            bucketing: {
+                columns: [
+                    'load_date',
+                ],
+                bucketCount: 8,
+                sortedBy: [],
+            },
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).toContain('HIVE_BUCKET_NOT_PARTITION_COLUMN');
+    expect(result).not.toContain('HIVE_BUCKET_COLUMN_EXISTS');
+});
+
+test('HIVE_BUCKET_NO_DUPLICATE_COLUMNS fires on a repeated bucket column', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            bucketing: {
+                columns: [
+                    'a',
+                    'a',
+                ],
+                bucketCount: 8,
+                sortedBy: [],
+            },
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('HIVE_BUCKET_NO_DUPLICATE_COLUMNS');
+});
+
+test('HIVE_BUCKET_COUNT_POSITIVE fires on a non-positive bucket count', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            bucketing: {
+                columns: [
+                    'a',
+                ],
+                bucketCount: 0,
+                sortedBy: [],
+            },
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('HIVE_BUCKET_COUNT_POSITIVE');
+});
+
+test('HIVE_BUCKET_COUNT_POSITIVE fires on a non-integer bucket count', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            bucketing: {
+                columns: [
+                    'a',
+                ],
+                bucketCount: 3.5,
+                sortedBy: [],
+            },
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('HIVE_BUCKET_COUNT_POSITIVE');
+});
+
+test('HIVE_SORT_COLUMN_EXISTS fires when a sort column is missing', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            bucketing: {
+                columns: [
+                    'a',
+                ],
+                bucketCount: 8,
+                sortedBy: [
+                    {
+                        column: 'ghost',
+                        direction: 'asc',
+                    },
+                ],
+            },
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('HIVE_SORT_COLUMN_EXISTS');
+});
+
+test('HIVE_SORT_DIRECTION_VALID fires on an unknown sort direction', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            bucketing: {
+                columns: [
+                    'a',
+                ],
+                bucketCount: 8,
+                sortedBy: [
+                    {
+                        column: 'a',
+                        direction: 'upwards',
+                    },
+                ],
+            },
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('HIVE_SORT_DIRECTION_VALID');
+});
+
+test('Hive sort direction is case-insensitive', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            bucketing: {
+                columns: [
+                    'a',
+                ],
+                bucketCount: 8,
+                sortedBy: [
+                    {
+                        column: 'a',
+                        direction: 'ASC',
+                    },
+                ],
+            },
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('HIVE_SORT_DIRECTION_VALID');
+});
+
+test('bucketing is ignored for non-Hive engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            columns: [
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            bucketing: {
+                columns: [
+                    'ghost',
+                ],
+                bucketCount: 0,
+                sortedBy: [],
+            },
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('HIVE_BUCKET_COLUMN_EXISTS');
+    expect(result).not.toContain('HIVE_BUCKET_COUNT_POSITIVE');
+});
+
 /// Postgres generated columns
 
 function genCol(name: string, type: string, generated: string, expressionColumns: string[]) {
