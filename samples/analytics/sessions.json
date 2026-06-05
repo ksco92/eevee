@@ -56,6 +56,19 @@
             "description": "Hash-bucket the user id into 8 buckets."
         }
     ],
+    "sortOrder": [
+        {
+            "column": "user_id",
+            "direction": "asc",
+            "nullOrder": "nulls-first"
+        },
+        {
+            "column": "started_at",
+            "transform": "hour",
+            "direction": "desc",
+            "nullOrder": "nulls-last"
+        }
+    ],
     "dependsOn": [
         "raw.app_events"
     ],

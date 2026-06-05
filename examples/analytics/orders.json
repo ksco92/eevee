@@ -42,6 +42,19 @@
             "description": "Monthly partition derived from the order timestamp."
         }
     ],
+    "sortOrder": [
+        {
+            "column": "order_id",
+            "direction": "asc",
+            "nullOrder": "nulls-first"
+        },
+        {
+            "column": "order_ts",
+            "transform": "day",
+            "direction": "desc",
+            "nullOrder": "nulls-last"
+        }
+    ],
     "foreignKeys": [
         {
             "sourceTable": "analytics.customers",

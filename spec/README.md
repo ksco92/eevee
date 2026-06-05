@@ -80,6 +80,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `columns` | yes | Non-empty; each has `name`, `type`, `description`, and an optional `nullable`. `type` validated per engine. |
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
 | `partitions` | no | Engine-specific semantics (see below). |
+| `sortOrder` | no | Iceberg only: ordered sort fields (`column`, optional `transform`, `direction`, `nullOrder`). Other engines ignore it. |
 | `tableProperties` | no | String→string map of engine settings. Only keys with a closed legal domain are validated per engine (see below); unknown keys pass through. |
 | `dependsOn` | conditionally | Required & non-empty when `isRawData` is `false`. Entries are `schema.table`. |
 | `foreignKeys` | no | Each: `sourceTable` (`schema.table`), `sourceColumn`, `localColumn`, `allowNulls`. |
@@ -100,6 +101,23 @@ nullability is unspecified and the cross-checks below do not fire.
 An Iceberg table may declare a `formatVersion` of `1`, `2`, or `3`
 (**`ICEBERG_FORMAT_VERSION_VALID`**, error, when out of range). It is optional and engine-specific;
 non-Iceberg engines ignore the field.
+
+### Sort order (Iceberg)
+
+An Iceberg table may declare a `sortOrder`: an ordered list of sort fields, each with a `column`
+(an existing data column), an optional `transform` (an Iceberg transform applied before sorting,
+defaulting to identity), a `direction` (`asc` or `desc`), and a `nullOrder` (`nulls-first` or
+`nulls-last`). Checks:
+
+- **`ICEBERG_SORT_COLUMN_EXISTS`** (error) — the sort column must exist in `columns`.
+- **`ICEBERG_SORT_DIRECTION_VALID`** (error) — `direction` must be `asc` or `desc`.
+- **`ICEBERG_SORT_NULL_ORDER_VALID`** (error) — `nullOrder` must be `nulls-first` or `nulls-last`.
+- **`ICEBERG_SORT_TRANSFORM_VALID`** (error) — a present `transform` must be a valid Iceberg transform.
+- **`ICEBERG_SORT_TRANSFORM_TYPE_LEGAL`** (error) — the transform must be legal on the column's type.
+- **`NO_DUPLICATE_SORT_FIELDS`** (error) — the (column, transform) pair must be unique; an omitted
+  transform and an explicit `identity` are the same field.
+
+The field is engine-specific; non-Iceberg engines ignore it.
 
 ### Table properties
 
