@@ -102,6 +102,8 @@ test('normalizes a structurally invalid table without throwing', () => {
         'good.key': 'ok',
     });
     expect(table?.definition.bucketing?.bucketCount).toBe(0);
+    expect(table?.definition.exclusionConstraints[0].elements[0].column).toBe('a');
+    expect(table?.definition.exclusionConstraints[0].elements[0].operator).toBe('=');
     expect(table?.definition.primaryKey).toEqual([
         'a',
     ]);

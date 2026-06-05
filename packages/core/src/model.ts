@@ -196,6 +196,30 @@ export interface Bucketing {
     readonly sortedBy: BucketSort[];
 }
 
+/** One element of an exclusion constraint: a column and its operator. */
+export interface ExclusionElement {
+    /** Column the element applies to. */
+    readonly column: string;
+
+    /** Opaque operator (e.g. `&&`, `=`). */
+    readonly operator: string;
+}
+
+/**
+ * An exclusion constraint (Postgres): no two rows may have all listed
+ * column/operator pairs evaluate true together (generalized uniqueness).
+ */
+export interface ExclusionConstraint {
+    /** Constraint name (unique within the table). */
+    readonly name: string;
+
+    /** Index access method (`gist` or `spgist`). */
+    readonly using: string;
+
+    /** Column/operator elements. */
+    readonly elements: ExclusionElement[];
+}
+
 /** A foreign-key reference to a column in another table. */
 export interface ForeignKey {
     /** Referenced table in `schema.table` format. */
@@ -251,6 +275,9 @@ export interface TableDefinition {
 
     /** CHECK constraints (Postgres). Optional; other engines ignore them. */
     readonly checkConstraints: CheckConstraint[];
+
+    /** Exclusion constraints (Postgres). Optional; other engines ignore them. */
+    readonly exclusionConstraints: ExclusionConstraint[];
 
     /** Hive bucketing spec. Optional; other engines ignore it. */
     readonly bucketing?: Bucketing;

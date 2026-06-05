@@ -6,6 +6,7 @@ import {
     Bucketing,
     CheckConstraint,
     Column,
+    ExclusionConstraint,
     ForeignKey,
     Index,
     Partition,
@@ -57,6 +58,7 @@ export interface TableInput {
     indexes?: Index[];
     uniqueConstraints?: UniqueConstraint[];
     checkConstraints?: CheckConstraint[];
+    exclusionConstraints?: ExclusionConstraint[];
     bucketing?: Bucketing;
     tableProperties?: Record<string, string>;
     dependsOn?: string[];
@@ -87,6 +89,7 @@ export function makeTable(input: TableInput): TableTypeBase {
             indexes: input.indexes ?? [],
             uniqueConstraints: input.uniqueConstraints ?? [],
             checkConstraints: input.checkConstraints ?? [],
+            exclusionConstraints: input.exclusionConstraints ?? [],
             bucketing: input.bucketing,
             tableProperties: input.tableProperties ?? {},
             dependsOn: input.dependsOn ?? [],

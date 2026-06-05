@@ -9,6 +9,7 @@
 
 import {
     CheckConstraint,
+    ExclusionConstraint,
     Index,
     Partition,
     UniqueConstraint,
@@ -66,6 +67,11 @@ const INTEGER_TYPES: ReadonlySet<string> = new Set([
     'int4',
     'bigint',
     'int8',
+]);
+
+const EXCLUSION_METHODS: ReadonlySet<string> = new Set([
+    'gist',
+    'spgist',
 ]);
 
 const COMPRESSION_METHODS: ReadonlySet<string> = new Set([
@@ -177,9 +183,86 @@ export class Postgres18Table extends TableTypeBase {
             ...this.indexViolations(),
             ...this.uniqueConstraintViolations(),
             ...this.checkConstraintViolations(),
+            ...this.exclusionConstraintViolations(),
             ...this.generatedColumnViolations(),
             ...this.columnAttributeViolations(),
         ];
+    }
+
+    /**
+     * Validate exclusion constraints.
+     *
+     * Emits `POSTGRES_EXCLUSION_NAME_UNIQUE`, `POSTGRES_EXCLUSION_METHOD_VALID`,
+     * `POSTGRES_EXCLUSION_COLUMN_EXISTS`, `POSTGRES_EXCLUSION_NO_DUPLICATE_COLUMNS`,
+     * and `POSTGRES_EXCLUSION_INCLUDES_PARTITION_KEYS`.
+     *
+     * @returns Every exclusion-constraint violation.
+     */
+    private exclusionConstraintViolations(): Violation[] {
+        const violations: Violation[] = [];
+        const {
+            exclusionConstraints,
+        } = this.definition;
+
+        for (const duplicate of this.findDuplicates(exclusionConstraints.map((constraint) => constraint.name))) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'POSTGRES_EXCLUSION_NAME_UNIQUE',
+                field: 'exclusionConstraints',
+                message: `duplicate exclusion-constraint name "${duplicate}"`,
+            }));
+        }
+
+        const partitionKeys = this.definition.partitions
+            .map((partition) => partition.name)
+            .filter((name) => this.hasColumn(name));
+
+        exclusionConstraints.forEach((constraint: ExclusionConstraint, position: number) => {
+            const field = `exclusionConstraints[${position}]`;
+            const columns = constraint.elements.map((element) => element.column);
+
+            if (!EXCLUSION_METHODS.has(constraint.using.trim().toLowerCase())) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_EXCLUSION_METHOD_VALID',
+                    field: `${field}.using`,
+                    message: `exclusion method "${constraint.using}" must be "gist" or "spgist"`,
+                }));
+            }
+
+            for (const duplicate of this.findDuplicates(columns)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_EXCLUSION_NO_DUPLICATE_COLUMNS',
+                    field: `${field}.elements`,
+                    message: `exclusion constraint "${constraint.name}" lists column "${duplicate}" more than once`,
+                }));
+            }
+
+            constraint.elements.forEach((element, elementIndex) => {
+                if (!this.hasColumn(element.column)) {
+                    violations.push(this.violation({
+                        level: 'error',
+                        code: 'POSTGRES_EXCLUSION_COLUMN_EXISTS',
+                        field: `${field}.elements[${elementIndex}].column`,
+                        message: `exclusion-constraint column "${element.column}" is not defined in columns`,
+                    }));
+                }
+            });
+
+            const missing = partitionKeys.filter((name) => !columns.includes(name));
+            if (missing.length > 0) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_EXCLUSION_INCLUDES_PARTITION_KEYS',
+                    field: `${field}.elements`,
+                    message: `exclusion constraint "${constraint.name}" on a partitioned table must include `
+                        + `every partition key column; missing: ${missing.join(', ')}`,
+                }));
+            }
+        });
+
+        return violations;
     }
 
     /**
