@@ -19,6 +19,18 @@ The standard itself lives in [`spec/`](spec/README.md). The reference validator 
 
 v0 supports three engines: `hive_parquet`, `iceberg_parquet`, `postgres_18`.
 
+## Install
+
+Released builds (published from each `v*` tag):
+
+- **npm:** `npm install -g fdd` — the CLI, run with Node.
+- **Standalone binary:** download the build for your platform from
+  [Releases](https://github.com/ksco92/eevee/releases) — a single file, no Node required.
+- **Python:** `pip install fdd` — a typed client that drives the CLI; platform wheels bundle the binary.
+  See [`packages/python`](packages/python).
+
+To run from source, follow the quick start below.
+
 ## Quick start
 
 ```bash

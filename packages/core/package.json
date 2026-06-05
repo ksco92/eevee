@@ -1,6 +1,6 @@
 {
     "name": "fdd",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "license": "Apache-2.0",
     "description": "Flexible Dataset Definition (FDD) — validator and tooling for the FDD dataset standard.",
     "author": "Rodrigo Carvajal",
@@ -37,6 +37,7 @@
     "scripts": {
         "build": "tsc -p tsconfig.build.json && npm run copy-schema",
         "copy-schema": "mkdir -p dist/src/schema && cp src/schema/*.json dist/src/schema/",
+        "build:binary": "bun build src/cli.ts --compile --outfile dist-bin/fdd",
         "watch": "tsc -p tsconfig.build.json -w",
         "test": "jest",
         "lint": "eslint . --ext .ts,.tsx --report-unused-disable-directives --max-warnings=0 --fix --ignore-pattern '**/*.d.ts'",
