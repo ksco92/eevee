@@ -14,7 +14,10 @@
         {
             "name": "email",
             "type": "varchar(320)",
-            "description": "Customer email address."
+            "description": "Customer email address.",
+            "collation": "en_US",
+            "compression": "lz4",
+            "storage": "extended"
         },
         {
             "name": "lifetime_value",

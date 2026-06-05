@@ -92,6 +92,9 @@ function normalizeColumns(value: unknown): Column[] {
             expressionColumns: 'expressionColumns' in record ? asStringArray(record.expressionColumns) : undefined,
             identity: asOptionalString(record.identity),
             default: asOptionalString(record.default),
+            collation: asOptionalString(record.collation),
+            compression: asOptionalString(record.compression),
+            storage: asOptionalString(record.storage),
         };
     });
 }

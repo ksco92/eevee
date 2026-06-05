@@ -18,6 +18,7 @@ import {
     TableTypeBase,
 } from '../table-type';
 import {
+    isPostgresCollatableType,
     isValidPostgresType,
 } from '../types';
 
@@ -65,6 +66,19 @@ const INTEGER_TYPES: ReadonlySet<string> = new Set([
     'int4',
     'bigint',
     'int8',
+]);
+
+const COMPRESSION_METHODS: ReadonlySet<string> = new Set([
+    'pglz',
+    'lz4',
+]);
+
+const STORAGE_STRATEGIES: ReadonlySet<string> = new Set([
+    'plain',
+    'external',
+    'extended',
+    'main',
+    'default',
 ]);
 
 /** Postgres 18 table. */
@@ -169,11 +183,13 @@ export class Postgres18Table extends TableTypeBase {
     }
 
     /**
-     * Validate identity columns, defaults, and the mutual exclusivity between a
-     * column being generated, an identity column, and having a default.
+     * Validate Postgres column attributes: identity columns, the mutual
+     * exclusivity between being generated / an identity / having a default, and
+     * per-column collation, compression, and storage.
      *
-     * Emits `POSTGRES_IDENTITY_VALID`, `POSTGRES_IDENTITY_TYPE_INTEGER`, and
-     * `POSTGRES_COLUMN_GENERATION_EXCLUSIVE`.
+     * Emits `POSTGRES_IDENTITY_VALID`, `POSTGRES_IDENTITY_TYPE_INTEGER`,
+     * `POSTGRES_COLUMN_GENERATION_EXCLUSIVE`, `POSTGRES_COLLATION_ON_TEXT_TYPE`,
+     * `POSTGRES_COMPRESSION_VALID`, and `POSTGRES_STORAGE_VALID`.
      *
      * @returns Every column-attribute violation.
      */
@@ -213,6 +229,35 @@ export class Postgres18Table extends TableTypeBase {
                     code: 'POSTGRES_COLUMN_GENERATION_EXCLUSIVE',
                     field,
                     message: `column "${column.name}" may have only one of generated, identity, or default`,
+                }));
+            }
+
+            if (column.collation !== undefined && !isPostgresCollatableType(column.type)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_COLLATION_ON_TEXT_TYPE',
+                    field: `${field}.collation`,
+                    message: `collation is only legal on a text type, not "${column.type}"`,
+                }));
+            }
+
+            if (column.compression !== undefined && !COMPRESSION_METHODS.has(column.compression.trim().toLowerCase())) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_COMPRESSION_VALID',
+                    field: `${field}.compression`,
+                    message: `compression "${column.compression}" must be "pglz" or "lz4"`,
+                }));
+            }
+
+            if (column.storage !== undefined && !STORAGE_STRATEGIES.has(column.storage.trim().toLowerCase())) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_STORAGE_VALID',
+                    field: `${field}.storage`,
+                    message: `storage "${column.storage}" must be one of: ${[
+                        ...STORAGE_STRATEGIES,
+                    ].join(', ')}`,
                 }));
             }
         });

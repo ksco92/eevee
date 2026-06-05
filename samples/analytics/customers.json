@@ -19,7 +19,8 @@
         {
             "name": "email",
             "type": "varchar(320)",
-            "description": "Customer email."
+            "description": "Customer email.",
+            "collation": "en_US"
         },
         {
             "name": "display_name",
@@ -100,7 +101,9 @@
         {
             "name": "prefs",
             "type": "jsonb",
-            "description": "Preference document."
+            "description": "Preference document.",
+            "compression": "lz4",
+            "storage": "extended"
         },
         {
             "name": "profile_doc",

@@ -58,6 +58,10 @@ test('loads the example root cleanly', () => {
     expect(identityColumn?.identity).toBe('always');
     const defaultColumn = customers?.definition.columns.find((column) => column.name === 'is_active');
     expect(defaultColumn?.default).toBe('true');
+    const emailColumn = customers?.definition.columns.find((column) => column.name === 'email');
+    expect(emailColumn?.collation).toBe('en_US');
+    expect(emailColumn?.compression).toBe('lz4');
+    expect(emailColumn?.storage).toBe('extended');
 
     const customersRaw = world.tables.get('raw.customers_raw');
     expect(customersRaw?.definition.bucketing?.bucketCount).toBe(16);

@@ -1574,6 +1574,121 @@ test('POSTGRES_COLUMN_GENERATION_EXCLUSIVE fires when a column is both an identi
     expect(codes(runSemanticRules(world))).toContain('POSTGRES_COLUMN_GENERATION_EXCLUSIVE');
 });
 
+test('valid Postgres collation, compression, and storage produce no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                {
+                    name: 'name',
+                    type: 'varchar(320)',
+                    description: 'name',
+                    collation: 'en_US',
+                    compression: 'lz4',
+                    storage: 'extended',
+                },
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('POSTGRES_COLLATION_ON_TEXT_TYPE fires when collation is set on a non-text type', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                {
+                    name: 'id',
+                    type: 'integer',
+                    description: 'id',
+                    collation: 'en_US',
+                },
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_COLLATION_ON_TEXT_TYPE');
+});
+
+test('POSTGRES_COMPRESSION_VALID fires on an unknown compression method', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                {
+                    name: 'doc',
+                    type: 'jsonb',
+                    description: 'doc',
+                    compression: 'zstd',
+                },
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_COMPRESSION_VALID');
+});
+
+test('POSTGRES_STORAGE_VALID fires on an unknown storage strategy', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                {
+                    name: 'doc',
+                    type: 'jsonb',
+                    description: 'doc',
+                    storage: 'inline',
+                },
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_STORAGE_VALID');
+});
+
+test('collation, compression, and storage are ignored for non-Postgres engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                {
+                    name: 'id',
+                    type: 'int',
+                    description: 'id',
+                    collation: 'en_US',
+                    compression: 'zstd',
+                    storage: 'inline',
+                },
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('POSTGRES_COLLATION_ON_TEXT_TYPE');
+    expect(result).not.toContain('POSTGRES_COMPRESSION_VALID');
+    expect(result).not.toContain('POSTGRES_STORAGE_VALID');
+});
+
 test('identity and default attributes are ignored for non-Postgres engines', () => {
     const world = makeWorld([
         makeTable({

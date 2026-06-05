@@ -61,6 +61,15 @@ export interface Column {
 
     /** Opaque column default expression (Postgres). */
     readonly default?: string;
+
+    /** Column collation name (Postgres). Opaque; legal only on text types. */
+    readonly collation?: string;
+
+    /** Per-column TOAST compression (Postgres): `pglz` or `lz4`. */
+    readonly compression?: string;
+
+    /** Per-column storage strategy (Postgres): `plain`/`external`/`extended`/`main`/`default`. */
+    readonly storage?: string;
 }
 
 /**

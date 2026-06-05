@@ -156,6 +156,18 @@
                 "default": {
                     "type": "string",
                     "minLength": 1
+                },
+                "collation": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "compression": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "storage": {
+                    "type": "string",
+                    "minLength": 1
                 }
             }
         },
