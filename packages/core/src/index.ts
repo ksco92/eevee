@@ -36,3 +36,12 @@ export {
     IcebergTransform,
     IcebergTransformKind,
 } from './iceberg';
+export {
+    buildDagDot,
+} from './diagram/dag';
+export {
+    buildErDot,
+} from './diagram/er';
+export {
+    renderDot,
+} from './diagram/render';

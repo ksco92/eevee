@@ -79,7 +79,9 @@ Reviewers reject PRs whose behavior and docs have drifted apart.
 
 - `npm test` runs every suite under `packages/core/test` and prints coverage.
 - Coverage is gated at 95% statements / branches / functions / lines on
-  `src/**/*.ts` (minus the CLI entry and the barrel) via `jest.config.js`. A
+  `src/**/*.ts` via `jest.config.js`, excluding only: the CLI entry (`src/cli.ts`),
+  the public-API barrel (`src/index.ts`), and the thin WASM render wrapper
+  (`src/diagram/render.ts`, exercised by the CI diagram-render step instead). A
   failing gate fails the suite, so docs do not paste coverage transcripts that
   would drift after the next change — run the command for live numbers.
 - Each new rule lands with its own fixture(s): one root that triggers exactly

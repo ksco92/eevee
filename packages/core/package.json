@@ -1,6 +1,6 @@
 {
     "name": "fdd",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "license": "Apache-2.0",
     "description": "Flexible Dataset Definition (FDD) — validator and tooling for the FDD dataset standard.",
     "author": "Rodrigo Carvajal",
@@ -45,6 +45,7 @@
         "prepublishOnly": "npm run build && npm test"
     },
     "dependencies": {
+        "@hpcc-js/wasm-graphviz": "^1.22.0",
         "ajv": "^8.17.1",
         "ajv-formats": "^3.0.1"
     },

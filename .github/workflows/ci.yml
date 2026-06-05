@@ -54,3 +54,9 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: node dist/src/cli.js validate ../../examples
+      - name: Render diagrams and check SVG output
+        run: |
+          node dist/src/cli.js graph ../../examples --out /tmp/dag.svg
+          node dist/src/cli.js er ../../examples --out /tmp/er.svg
+          grep -q "<svg" /tmp/dag.svg
+          grep -q "<svg" /tmp/er.svg
