@@ -24,6 +24,16 @@
             "name": "is_active",
             "type": "boolean",
             "description": "Whether the customer is active."
+        },
+        {
+            "name": "lifetime_value_cents",
+            "type": "bigint",
+            "description": "Lifetime value in cents (generated).",
+            "generated": "stored",
+            "expression": "lifetime_value * 100",
+            "expressionColumns": [
+                "lifetime_value"
+            ]
         }
     ],
     "primaryKey": [

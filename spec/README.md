@@ -77,7 +77,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `tableType` | yes | `hive_parquet` \| `iceberg_parquet` \| `postgres_18`. |
 | `isRawData` | yes | `true` marks the top of the pipeline. |
 | `formatVersion` | no | Iceberg only: the table format version (`1`, `2`, or `3`). Other engines ignore it. |
-| `columns` | yes | Non-empty; each has `name`, `type`, `description`, and an optional `nullable`. `type` validated per engine. |
+| `columns` | yes | Non-empty; each has `name`, `type`, `description`, an optional `nullable`, and optional Postgres generation fields (`generated`, `expression`, `expressionColumns`). `type` validated per engine. |
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
 | `partitions` | no | Engine-specific semantics (see below). |
 | `sortOrder` | no | Iceberg only: ordered sort fields (`column`, optional `transform`, `direction`, `nullOrder`). Other engines ignore it. |
@@ -179,6 +179,24 @@ For `iceberg_parquet` the validated keys are:
   `history.expire.max-ref-age-ms` (snapshot retention), `write.metadata.previous-versions-max`.
 - **Bounded integer** (**`ICEBERG_PROPERTY_INT_RANGE`**, error) — `write.parquet.compression-level`
   (1–22).
+
+### Generated columns (Postgres)
+
+A `postgres_18` column may be a generated column: set `generated` to `stored` or `virtual`, an opaque
+`expression`, and the `expressionColumns` it references. Checks:
+
+- **`POSTGRES_GENERATED_KIND_VALID`** (error) — `generated` is `stored` or `virtual`.
+- **`POSTGRES_GENERATED_EXPRESSION_COLUMN_EXISTS`** (error) — each referenced column exists.
+- **`POSTGRES_GENERATED_NO_SELF_REFERENCE`** (error) — the column does not reference itself.
+- **`POSTGRES_GENERATED_NO_GENERATED_REFERENCE`** (error) — it does not reference another generated
+  column.
+- **`POSTGRES_GENERATED_NOT_IN_PARTITION_KEY`** (error) — a generated column is not a partition key.
+- **`POSTGRES_VIRTUAL_GENERATED_NOT_IN_PK`** (error) — a `virtual` generated column is not part of the
+  primary key.
+
+The `expression` stays opaque; only the declared `expressionColumns` are resolved. The fields are
+engine-specific; non-Postgres engines ignore them. (Column `default` and identity columns, and their
+mutual exclusivity with generation, are a separate later addition.)
 
 ### Partitions per engine
 

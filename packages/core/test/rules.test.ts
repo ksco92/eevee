@@ -875,6 +875,204 @@ test('indexes are ignored for non-Postgres engines', () => {
     expect(result).not.toContain('POSTGRES_INDEX_COLUMN_EXISTS');
 });
 
+/// Postgres generated columns
+
+function genCol(name: string, type: string, generated: string, expressionColumns: string[]) {
+    return {
+        name,
+        type,
+        description: `column ${name}`,
+        generated,
+        expressionColumns,
+    };
+}
+
+test('a valid Postgres generated column produces no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                col('amount', 'numeric(10,2)'),
+                genCol('doubled', 'numeric(10,2)', 'stored', [
+                    'amount',
+                ]),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('POSTGRES_GENERATED_KIND_VALID fires on an unknown generated kind', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                genCol('x', 'integer', 'computed', [
+                    'id',
+                ]),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_GENERATED_KIND_VALID');
+});
+
+test('POSTGRES_GENERATED_EXPRESSION_COLUMN_EXISTS fires on a missing reference', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                genCol('x', 'integer', 'stored', [
+                    'ghost',
+                ]),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_GENERATED_EXPRESSION_COLUMN_EXISTS');
+});
+
+test('POSTGRES_GENERATED_NO_SELF_REFERENCE fires when a generated column references itself', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                genCol('x', 'integer', 'stored', [
+                    'x',
+                ]),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_GENERATED_NO_SELF_REFERENCE');
+});
+
+test('POSTGRES_GENERATED_NO_GENERATED_REFERENCE fires when a generated column references another generated column', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                col('base', 'integer'),
+                genCol('first', 'integer', 'stored', [
+                    'base',
+                ]),
+                genCol('second', 'integer', 'stored', [
+                    'first',
+                ]),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_GENERATED_NO_GENERATED_REFERENCE');
+});
+
+test('POSTGRES_GENERATED_NOT_IN_PARTITION_KEY fires when a generated column is a partition key', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                col('amount', 'numeric(10,2)'),
+                genCol('total', 'numeric(10,2)', 'stored', [
+                    'amount',
+                ]),
+            ],
+            partitions: [
+                part('total', 'range'),
+            ],
+            primaryKey: [
+                'id',
+                'total',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_GENERATED_NOT_IN_PARTITION_KEY');
+});
+
+test('POSTGRES_VIRTUAL_GENERATED_NOT_IN_PK fires when a virtual generated column is in the primary key', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                genCol('full_name', 'text', 'virtual', []),
+            ],
+            primaryKey: [
+                'id',
+                'full_name',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_VIRTUAL_GENERATED_NOT_IN_PK');
+});
+
+test('a stored generated column in the primary key does not trigger the virtual-PK rule', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                {
+                    name: 'slug',
+                    type: 'text',
+                    description: 'column slug',
+                    generated: 'stored',
+                },
+            ],
+            primaryKey: [
+                'id',
+                'slug',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('POSTGRES_VIRTUAL_GENERATED_NOT_IN_PK');
+});
+
+test('generated columns are ignored for non-Postgres engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            columns: [
+                col('id', 'int'),
+                genCol('x', 'int', 'computed', [
+                    'ghost',
+                ]),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('POSTGRES_GENERATED_KIND_VALID');
+    expect(result).not.toContain('POSTGRES_GENERATED_EXPRESSION_COLUMN_EXISTS');
+});
+
 /// Postgres unique and check constraints
 
 test('a valid Postgres unique constraint produces no violations', () => {

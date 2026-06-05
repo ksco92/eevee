@@ -134,6 +134,16 @@
             "name": "scores",
             "type": "integer[]",
             "description": "Per-period scores (array type)."
+        },
+        {
+            "name": "lifetime_value_cents",
+            "type": "bigint",
+            "description": "Lifetime value in cents (stored generated column).",
+            "generated": "stored",
+            "expression": "lifetime_value * 100",
+            "expressionColumns": [
+                "lifetime_value"
+            ]
         }
     ],
     "primaryKey": [
