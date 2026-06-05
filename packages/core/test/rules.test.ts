@@ -559,6 +559,201 @@ test('format version is ignored for non-Iceberg engines', () => {
     expect(codes(runSemanticRules(world))).not.toContain('ICEBERG_FORMAT_VERSION_VALID');
 });
 
+/// Iceberg sort order
+
+function icebergWithSort(sortOrder: Array<{ column: string; direction: string; nullOrder: string; transform?: string }>) {
+    return makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            sortOrder,
+            columns: [
+                col('a', 'long'),
+                col('ts', 'timestamp'),
+                col('name', 'string'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+}
+
+test('a valid Iceberg sort order produces no violations', () => {
+    const result = runSemanticRules(icebergWithSort([
+        {
+            column: 'a',
+            direction: 'asc',
+            nullOrder: 'nulls-first',
+        },
+        {
+            column: 'ts',
+            direction: 'desc',
+            nullOrder: 'nulls-last',
+            transform: 'day',
+        },
+    ]));
+    expect(result).toHaveLength(0);
+});
+
+test('ICEBERG_SORT_COLUMN_EXISTS fires when the sort column is missing', () => {
+    const result = codes(runSemanticRules(icebergWithSort([
+        {
+            column: 'ghost',
+            direction: 'asc',
+            nullOrder: 'nulls-first',
+        },
+    ])));
+    expect(result).toContain('ICEBERG_SORT_COLUMN_EXISTS');
+});
+
+test('ICEBERG_SORT_DIRECTION_VALID fires on an unknown direction', () => {
+    const result = codes(runSemanticRules(icebergWithSort([
+        {
+            column: 'a',
+            direction: 'ascending',
+            nullOrder: 'nulls-first',
+        },
+    ])));
+    expect(result).toContain('ICEBERG_SORT_DIRECTION_VALID');
+});
+
+test('ICEBERG_SORT_NULL_ORDER_VALID fires on an unknown null order', () => {
+    const result = codes(runSemanticRules(icebergWithSort([
+        {
+            column: 'a',
+            direction: 'asc',
+            nullOrder: 'nulls_first',
+        },
+    ])));
+    expect(result).toContain('ICEBERG_SORT_NULL_ORDER_VALID');
+});
+
+test('ICEBERG_SORT_TRANSFORM_VALID fires on an unknown transform', () => {
+    const result = codes(runSemanticRules(icebergWithSort([
+        {
+            column: 'ts',
+            direction: 'asc',
+            nullOrder: 'nulls-first',
+            transform: 'not_a_transform',
+        },
+    ])));
+    expect(result).toContain('ICEBERG_SORT_TRANSFORM_VALID');
+});
+
+test('ICEBERG_SORT_TRANSFORM_TYPE_LEGAL fires when a transform is illegal on the column type', () => {
+    const result = codes(runSemanticRules(icebergWithSort([
+        {
+            column: 'name',
+            direction: 'asc',
+            nullOrder: 'nulls-first',
+            transform: 'hour',
+        },
+    ])));
+    expect(result).toContain('ICEBERG_SORT_TRANSFORM_TYPE_LEGAL');
+});
+
+test('sort transform legality is skipped when the source type is unparseable', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet',
+            sortOrder: [
+                {
+                    column: 'weird',
+                    direction: 'asc',
+                    nullOrder: 'nulls-first',
+                    transform: 'identity',
+                },
+            ],
+            columns: [
+                col('weird', 'not_a_type'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('ICEBERG_SORT_TRANSFORM_TYPE_LEGAL');
+});
+
+test('NO_DUPLICATE_SORT_FIELDS fires on a repeated sort column', () => {
+    const result = codes(runSemanticRules(icebergWithSort([
+        {
+            column: 'a',
+            direction: 'asc',
+            nullOrder: 'nulls-first',
+        },
+        {
+            column: 'a',
+            direction: 'desc',
+            nullOrder: 'nulls-last',
+        },
+    ])));
+    expect(result).toContain('NO_DUPLICATE_SORT_FIELDS');
+});
+
+test('an omitted sort transform collides with an explicit identity transform', () => {
+    const result = codes(runSemanticRules(icebergWithSort([
+        {
+            column: 'a',
+            direction: 'asc',
+            nullOrder: 'nulls-first',
+        },
+        {
+            column: 'a',
+            direction: 'asc',
+            nullOrder: 'nulls-first',
+            transform: 'identity',
+        },
+    ])));
+    expect(result).toContain('NO_DUPLICATE_SORT_FIELDS');
+});
+
+test('different transforms on the same sort column are distinct', () => {
+    const result = codes(runSemanticRules(icebergWithSort([
+        {
+            column: 'ts',
+            direction: 'asc',
+            nullOrder: 'nulls-first',
+            transform: 'year',
+        },
+        {
+            column: 'ts',
+            direction: 'asc',
+            nullOrder: 'nulls-first',
+            transform: 'month',
+        },
+    ])));
+    expect(result).not.toContain('NO_DUPLICATE_SORT_FIELDS');
+});
+
+test('sort order is ignored for non-Iceberg engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            sortOrder: [
+                {
+                    column: 'ghost',
+                    direction: 'sideways',
+                    nullOrder: 'whoknows',
+                },
+            ],
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('ICEBERG_SORT_COLUMN_EXISTS');
+    expect(result).not.toContain('ICEBERG_SORT_DIRECTION_VALID');
+});
+
 /// Iceberg table properties
 
 function icebergWithProps(tableProperties: Record<string, string>) {

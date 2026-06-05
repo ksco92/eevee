@@ -8,6 +8,7 @@
 
 import {
     Partition,
+    SortField,
     Violation,
 } from '../model';
 import {
@@ -189,8 +190,20 @@ export class IcebergParquetTable extends TableTypeBase {
         },
     };
 
+    /// Legal sort directions and null orderings.
+    private static readonly SORT_DIRECTIONS = new Set([
+        'asc',
+        'desc',
+    ]);
+
+    private static readonly SORT_NULL_ORDERS = new Set([
+        'nulls-first',
+        'nulls-last',
+    ]);
+
     /**
-     * Iceberg engine-specific rules: format version and table properties.
+     * Iceberg engine-specific rules: format version, table properties, and sort
+     * order.
      *
      * @returns Every engine-specific violation.
      */
@@ -198,7 +211,114 @@ export class IcebergParquetTable extends TableTypeBase {
         return [
             ...this.formatVersionViolations(),
             ...this.tablePropertyViolations(),
+            ...this.sortOrderViolations(),
         ];
+    }
+
+    /**
+     * Validate the Iceberg sort order.
+     *
+     * Emits `NO_DUPLICATE_SORT_FIELDS` (keyed by source column + normalized
+     * transform), `ICEBERG_SORT_COLUMN_EXISTS`, `ICEBERG_SORT_DIRECTION_VALID`,
+     * `ICEBERG_SORT_NULL_ORDER_VALID`, `ICEBERG_SORT_TRANSFORM_VALID`, and
+     * `ICEBERG_SORT_TRANSFORM_TYPE_LEGAL`.
+     *
+     * @returns Every sort-order violation.
+     */
+    private sortOrderViolations(): Violation[] {
+        const violations: Violation[] = [];
+        const {
+            sortOrder,
+        } = this.definition;
+
+        const seen = new Set<string>();
+        sortOrder.forEach((field, index) => {
+            const key = this.sortFieldKey(field);
+            if (seen.has(key)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'NO_DUPLICATE_SORT_FIELDS',
+                    field: `sortOrder[${index}]`,
+                    message: `duplicate sort field: "${field.column}"`
+                        + `${field.transform ? ` with transform "${field.transform}"` : ''}`,
+                }));
+            }
+            seen.add(key);
+        });
+
+        sortOrder.forEach((field, index) => {
+            if (!IcebergParquetTable.SORT_DIRECTIONS.has(field.direction)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_SORT_DIRECTION_VALID',
+                    field: `sortOrder[${index}].direction`,
+                    message: `sort direction "${field.direction}" must be "asc" or "desc"`,
+                }));
+            }
+            if (!IcebergParquetTable.SORT_NULL_ORDERS.has(field.nullOrder)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_SORT_NULL_ORDER_VALID',
+                    field: `sortOrder[${index}].nullOrder`,
+                    message: `sort null order "${field.nullOrder}" must be "nulls-first" or "nulls-last"`,
+                }));
+            }
+
+            const sourceColumn = this.definition.columns.find((column) => column.name === field.column);
+            if (sourceColumn === undefined) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_SORT_COLUMN_EXISTS',
+                    field: `sortOrder[${index}].column`,
+                    message: `sort column "${field.column}" is not defined in columns`,
+                }));
+                return;
+            }
+
+            if (field.transform === undefined) {
+                return;
+            }
+            const transform = parseIcebergTransform(field.transform);
+            if (transform === null) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_SORT_TRANSFORM_VALID',
+                    field: `sortOrder[${index}].transform`,
+                    message: `"${field.transform}" is not a valid Iceberg transform`,
+                }));
+                return;
+            }
+            const sourceType = parseIcebergType(sourceColumn.type);
+            if (sourceType !== null && !transformLegalOnType(transform, sourceType)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_SORT_TRANSFORM_TYPE_LEGAL',
+                    field: `sortOrder[${index}].transform`,
+                    message: `transform "${field.transform}" is not legal on `
+                        + `column "${field.column}" of type "${sourceColumn.type}"`,
+                }));
+            }
+        });
+
+        return violations;
+    }
+
+    /**
+     * Normalize a sort field into its identity key. An omitted transform and an
+     * explicit `identity` collapse to the same key so they count as duplicates.
+     *
+     * @param field Sort field to key.
+     * @returns The identity string for duplicate detection.
+     */
+    private sortFieldKey(field: SortField): string {
+        if (field.transform === undefined) {
+            return `${field.column} identity:`;
+        }
+        const transform = parseIcebergTransform(field.transform);
+        const normalizedTransform = transform
+            ? `${transform.kind}:${transform.param ?? ''}`
+            : field.transform.trim().toLowerCase();
+        return `${field.column} ${normalizedTransform}`;
     }
 
     /// ICEBERG_FORMAT_VERSION_VALID — `formatVersion`, when set, is 1, 2, or 3.

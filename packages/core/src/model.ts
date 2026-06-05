@@ -59,6 +59,25 @@ export interface Partition {
     readonly description: string;
 }
 
+/**
+ * A single sort field in an Iceberg table's sort order. `column` is a data
+ * column; `transform` is an optional Iceberg transform applied before sorting
+ * (defaults to identity); `direction` and `nullOrder` set the ordering.
+ */
+export interface SortField {
+    /** Source data column to sort by. */
+    readonly column: string;
+
+    /** Optional Iceberg transform applied before sorting (e.g. `day`, `bucket[16]`). */
+    readonly transform?: string;
+
+    /** Sort direction (`asc` or `desc`). */
+    readonly direction: string;
+
+    /** Null ordering (`nulls-first` or `nulls-last`). */
+    readonly nullOrder: string;
+}
+
 /** A foreign-key reference to a column in another table. */
 export interface ForeignKey {
     /** Referenced table in `schema.table` format. */
@@ -102,6 +121,9 @@ export interface TableDefinition {
 
     /** Partition entries (engine-specific semantics). */
     readonly partitions: Partition[];
+
+    /** Iceberg sort order (ordered sort fields). Optional; other engines ignore it. */
+    readonly sortOrder: SortField[];
 
     /**
      * Engine table properties as a string→string map (e.g. Iceberg

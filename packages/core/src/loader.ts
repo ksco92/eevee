@@ -16,6 +16,7 @@ import {
     ForeignKey,
     Partition,
     SchemaDescription,
+    SortField,
     TableDefinition,
     Violation,
 } from './model';
@@ -66,6 +67,10 @@ function asOptionalNumber(value: unknown): number | undefined {
     return typeof value === 'number' ? value : undefined;
 }
 
+function asOptionalString(value: unknown): string | undefined {
+    return typeof value === 'string' ? value : undefined;
+}
+
 function asStringArray(value: unknown): string[] {
     return asArray(value).filter((item): item is string => typeof item === 'string');
 }
@@ -89,6 +94,18 @@ function normalizePartitions(value: unknown): Partition[] {
             name: asString(record.name),
             type: asString(record.type),
             description: asString(record.description),
+        };
+    });
+}
+
+function normalizeSortOrder(value: unknown): SortField[] {
+    return asArray(value).map((raw) => {
+        const record = asRecord(raw);
+        return {
+            column: asString(record.column),
+            transform: asOptionalString(record.transform),
+            direction: asString(record.direction),
+            nullOrder: asString(record.nullOrder),
         };
     });
 }
@@ -130,6 +147,7 @@ function normalizeTableDefinition(raw: unknown): TableDefinition {
         columns: normalizeColumns(record.columns),
         primaryKey: asStringArray(record.primaryKey),
         partitions: normalizePartitions(record.partitions),
+        sortOrder: normalizeSortOrder(record.sortOrder),
         tableProperties: normalizeStringMap(record.tableProperties),
         dependsOn: asStringArray(record.dependsOn),
         foreignKeys: normalizeForeignKeys(record.foreignKeys),

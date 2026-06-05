@@ -30,6 +30,9 @@ test('loads the example root cleanly', () => {
     const orderId = orders?.definition.columns.find((column) => column.name === 'order_id');
     expect(orderId?.nullable).toBe(false);
     expect(orders?.definition.formatVersion).toBe(2);
+    expect(orders?.definition.sortOrder).toHaveLength(2);
+    expect(orders?.definition.sortOrder[0].transform).toBeUndefined();
+    expect(orders?.definition.sortOrder[1].transform).toBe('day');
 });
 
 test('reports a JSON parse error', () => {
