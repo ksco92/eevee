@@ -46,6 +46,23 @@
             ]
         }
     ],
+    "uniqueConstraints": [
+        {
+            "name": "uq_customers_email",
+            "columns": [
+                "email"
+            ]
+        }
+    ],
+    "checkConstraints": [
+        {
+            "name": "ck_customers_ltv_nonnegative",
+            "expression": "lifetime_value >= 0",
+            "columns": [
+                "lifetime_value"
+            ]
+        }
+    ],
     "dependsOn": [
         "raw.customers_raw"
     ],

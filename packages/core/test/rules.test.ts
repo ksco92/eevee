@@ -112,6 +112,7 @@ test('a valid Postgres partition produces no partition violations', () => {
             ],
             primaryKey: [
                 'id',
+                'created_at',
             ],
             partitions: [
                 part('created_at', 'range'),
@@ -119,6 +120,47 @@ test('a valid Postgres partition produces no partition violations', () => {
         }),
     ]);
     expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('POSTGRES_PARTITION_KEY_IN_PK fires when a partition column is not in the primary key', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+                col('created_at', 'timestamptz'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+            partitions: [
+                part('created_at', 'range'),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_PARTITION_KEY_IN_PK');
+});
+
+test('POSTGRES_PARTITION_KEY_IN_PK does not fire for a partition column missing from columns', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+            partitions: [
+                part('ghost', 'range'),
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).toContain('POSTGRES_PARTITION_COLUMN_EXISTS');
+    expect(result).not.toContain('POSTGRES_PARTITION_KEY_IN_PK');
 });
 
 test('POSTGRES_PARTITION_COLUMN_EXISTS fires when the key column is missing', () => {
@@ -831,6 +873,316 @@ test('indexes are ignored for non-Postgres engines', () => {
     const result = codes(runSemanticRules(world));
     expect(result).not.toContain('POSTGRES_INDEX_METHOD_VALID');
     expect(result).not.toContain('POSTGRES_INDEX_COLUMN_EXISTS');
+});
+
+/// Postgres unique and check constraints
+
+test('a valid Postgres unique constraint produces no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            uniqueConstraints: [
+                {
+                    name: 'uq_email',
+                    columns: [
+                        'email',
+                    ],
+                    nullsNotDistinct: false,
+                },
+            ],
+            columns: [
+                col('id', 'integer'),
+                col('email', 'text'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('POSTGRES_UNIQUE_NAME_UNIQUE fires on duplicate constraint names', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            uniqueConstraints: [
+                {
+                    name: 'dup',
+                    columns: [
+                        'a',
+                    ],
+                },
+                {
+                    name: 'dup',
+                    columns: [
+                        'b',
+                    ],
+                },
+            ],
+            columns: [
+                col('a', 'integer'),
+                col('b', 'integer'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_UNIQUE_NAME_UNIQUE');
+});
+
+test('POSTGRES_UNIQUE_COLUMN_EXISTS fires when a constraint column is missing', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            uniqueConstraints: [
+                {
+                    name: 'uq',
+                    columns: [
+                        'ghost',
+                    ],
+                },
+            ],
+            columns: [
+                col('a', 'integer'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_UNIQUE_COLUMN_EXISTS');
+});
+
+test('POSTGRES_UNIQUE_NO_DUPLICATE_COLUMNS fires on a repeated column', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            uniqueConstraints: [
+                {
+                    name: 'uq',
+                    columns: [
+                        'a',
+                        'a',
+                    ],
+                },
+            ],
+            columns: [
+                col('a', 'integer'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_UNIQUE_NO_DUPLICATE_COLUMNS');
+});
+
+test('a valid Postgres check constraint produces no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            checkConstraints: [
+                {
+                    name: 'ck_price',
+                    expression: 'price > 0',
+                    columns: [
+                        'price',
+                    ],
+                },
+            ],
+            columns: [
+                col('id', 'integer'),
+                col('price', 'numeric(10,2)'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('POSTGRES_CHECK_NAME_UNIQUE fires on duplicate constraint names', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            checkConstraints: [
+                {
+                    name: 'dup',
+                    expression: 'a > 0',
+                    columns: [
+                        'a',
+                    ],
+                },
+                {
+                    name: 'dup',
+                    expression: 'a < 100',
+                    columns: [
+                        'a',
+                    ],
+                },
+            ],
+            columns: [
+                col('a', 'integer'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_CHECK_NAME_UNIQUE');
+});
+
+test('POSTGRES_CHECK_COLUMN_EXISTS fires when a referenced column is missing', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            checkConstraints: [
+                {
+                    name: 'ck',
+                    expression: 'ghost > 0',
+                    columns: [
+                        'ghost',
+                    ],
+                },
+            ],
+            columns: [
+                col('a', 'integer'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_CHECK_COLUMN_EXISTS');
+});
+
+test('POSTGRES_UNIQUE_REDUNDANT_WITH_PK warns when a unique constraint duplicates the primary key', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            uniqueConstraints: [
+                {
+                    name: 'uq',
+                    columns: [
+                        'id',
+                    ],
+                },
+            ],
+            columns: [
+                col('id', 'integer'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_UNIQUE_REDUNDANT_WITH_PK');
+});
+
+test('POSTGRES_UNIQUE_INCLUDES_PARTITION_KEYS fires when a unique omits a partition key', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            uniqueConstraints: [
+                {
+                    name: 'uq',
+                    columns: [
+                        'id',
+                    ],
+                },
+            ],
+            partitions: [
+                part('created_at', 'range'),
+            ],
+            columns: [
+                col('id', 'integer'),
+                col('created_at', 'timestamptz'),
+            ],
+            primaryKey: [
+                'id',
+                'created_at',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('POSTGRES_UNIQUE_INCLUDES_PARTITION_KEYS');
+});
+
+test('POSTGRES_UNIQUE_INCLUDES_PARTITION_KEYS stays silent when the unique includes the partition key', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            uniqueConstraints: [
+                {
+                    name: 'uq',
+                    columns: [
+                        'email',
+                        'created_at',
+                    ],
+                },
+            ],
+            partitions: [
+                part('created_at', 'range'),
+            ],
+            columns: [
+                col('id', 'integer'),
+                col('email', 'text'),
+                col('created_at', 'timestamptz'),
+            ],
+            primaryKey: [
+                'id',
+                'created_at',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).not.toContain('POSTGRES_UNIQUE_INCLUDES_PARTITION_KEYS');
+});
+
+test('unique and check constraints are ignored for non-Postgres engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'hive_parquet',
+            uniqueConstraints: [
+                {
+                    name: 'uq',
+                    columns: [
+                        'ghost',
+                    ],
+                },
+            ],
+            checkConstraints: [
+                {
+                    name: 'ck',
+                    expression: 'ghost > 0',
+                    columns: [
+                        'ghost',
+                    ],
+                },
+            ],
+            columns: [
+                col('a', 'int'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('POSTGRES_UNIQUE_COLUMN_EXISTS');
+    expect(result).not.toContain('POSTGRES_CHECK_COLUMN_EXISTS');
 });
 
 /// Iceberg sort order

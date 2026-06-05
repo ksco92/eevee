@@ -8,8 +8,10 @@
  */
 
 import {
+    CheckConstraint,
     Index,
     Partition,
+    UniqueConstraint,
     Violation,
 } from '../model';
 import {
@@ -91,6 +93,15 @@ export class Postgres18Table extends TableTypeBase {
                     field: `partitions[${index}].name`,
                     message: `partition key column "${partition.name}" is not defined in columns`,
                 }));
+            } else if (!this.definition.primaryKey.includes(partition.name)) {
+                /// Postgres requires the primary key to include every partition-key
+                /// column, so a partition column outside the primary key is invalid.
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_PARTITION_KEY_IN_PK',
+                    field: `partitions[${index}].name`,
+                    message: `partition key column "${partition.name}" must be part of the primary key`,
+                }));
             }
 
             const strategy = partition.type.trim().toLowerCase();
@@ -121,12 +132,142 @@ export class Postgres18Table extends TableTypeBase {
     }
 
     /**
-     * Postgres engine-specific rules: index validation.
+     * Postgres engine-specific rules: indexes, unique constraints, and check
+     * constraints.
      *
      * @returns Every engine-specific violation.
      */
     public engineSpecificViolations(): Violation[] {
-        return this.indexViolations();
+        return [
+            ...this.indexViolations(),
+            ...this.uniqueConstraintViolations(),
+            ...this.checkConstraintViolations(),
+        ];
+    }
+
+    /**
+     * Validate UNIQUE constraints.
+     *
+     * Emits `POSTGRES_UNIQUE_NAME_UNIQUE`, `POSTGRES_UNIQUE_COLUMN_EXISTS`, and
+     * `POSTGRES_UNIQUE_NO_DUPLICATE_COLUMNS`.
+     *
+     * @returns Every unique-constraint violation.
+     */
+    private uniqueConstraintViolations(): Violation[] {
+        const violations: Violation[] = [];
+        const {
+            uniqueConstraints,
+        } = this.definition;
+
+        for (const duplicate of this.findDuplicates(uniqueConstraints.map((constraint) => constraint.name))) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'POSTGRES_UNIQUE_NAME_UNIQUE',
+                field: 'uniqueConstraints',
+                message: `duplicate unique-constraint name "${duplicate}"`,
+            }));
+        }
+
+        uniqueConstraints.forEach((constraint: UniqueConstraint, position: number) => {
+            const field = `uniqueConstraints[${position}]`;
+            for (const duplicate of this.findDuplicates(constraint.columns)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'POSTGRES_UNIQUE_NO_DUPLICATE_COLUMNS',
+                    field: `${field}.columns`,
+                    message: `unique constraint "${constraint.name}" lists column "${duplicate}" more than once`,
+                }));
+            }
+            constraint.columns.forEach((column, columnIndex) => {
+                if (!this.hasColumn(column)) {
+                    violations.push(this.violation({
+                        level: 'error',
+                        code: 'POSTGRES_UNIQUE_COLUMN_EXISTS',
+                        field: `${field}.columns[${columnIndex}]`,
+                        message: `unique-constraint column "${column}" is not defined in columns`,
+                    }));
+                }
+            });
+
+            violations.push(...this.uniqueConstraintKeyViolations(constraint, field));
+        });
+
+        return violations;
+    }
+
+    /// Relationship rules between a unique constraint and the primary key /
+    /// partition key: redundancy with the PK, and the Postgres rule that a
+    /// unique constraint on a partitioned table must include every partition key.
+    private uniqueConstraintKeyViolations(constraint: UniqueConstraint, field: string): Violation[] {
+        const violations: Violation[] = [];
+
+        const primaryKey = this.definition.primaryKey;
+        const columnSet = new Set(constraint.columns);
+        if (primaryKey.length > 0 && primaryKey.length === columnSet.size
+            && primaryKey.every((column) => columnSet.has(column))) {
+            violations.push(this.violation({
+                level: 'warning',
+                code: 'POSTGRES_UNIQUE_REDUNDANT_WITH_PK',
+                field: `${field}.columns`,
+                message: `unique constraint "${constraint.name}" duplicates the primary key`,
+            }));
+        }
+
+        const partitionKeys = this.definition.partitions
+            .map((partition) => partition.name)
+            .filter((name) => this.hasColumn(name));
+        const missing = partitionKeys.filter((name) => !constraint.columns.includes(name));
+        if (missing.length > 0) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'POSTGRES_UNIQUE_INCLUDES_PARTITION_KEYS',
+                field: `${field}.columns`,
+                message: `unique constraint "${constraint.name}" on a partitioned table must include `
+                    + `every partition key column; missing: ${missing.join(', ')}`,
+            }));
+        }
+
+        return violations;
+    }
+
+    /**
+     * Validate CHECK constraints. Only the explicit referenced-column list is
+     * checked; the predicate itself stays opaque.
+     *
+     * Emits `POSTGRES_CHECK_NAME_UNIQUE` and `POSTGRES_CHECK_COLUMN_EXISTS`.
+     *
+     * @returns Every check-constraint violation.
+     */
+    private checkConstraintViolations(): Violation[] {
+        const violations: Violation[] = [];
+        const {
+            checkConstraints,
+        } = this.definition;
+
+        for (const duplicate of this.findDuplicates(checkConstraints.map((constraint) => constraint.name))) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'POSTGRES_CHECK_NAME_UNIQUE',
+                field: 'checkConstraints',
+                message: `duplicate check-constraint name "${duplicate}"`,
+            }));
+        }
+
+        checkConstraints.forEach((constraint: CheckConstraint, position: number) => {
+            const field = `checkConstraints[${position}]`;
+            constraint.columns.forEach((column, columnIndex) => {
+                if (!this.hasColumn(column)) {
+                    violations.push(this.violation({
+                        level: 'error',
+                        code: 'POSTGRES_CHECK_COLUMN_EXISTS',
+                        field: `${field}.columns[${columnIndex}]`,
+                        message: `check-constraint column "${column}" is not defined in columns`,
+                    }));
+                }
+            });
+        });
+
+        return violations;
     }
 
     /**

@@ -137,13 +137,33 @@
         }
     ],
     "primaryKey": [
-        "customer_id"
+        "customer_id",
+        "created_at"
     ],
     "partitions": [
         {
             "name": "created_at",
             "type": "range",
-            "description": "Range-partitioned by creation time (Postgres declarative partitioning)."
+            "description": "Range-partitioned by creation time (the primary key includes the partition column, as Postgres requires)."
+        }
+    ],
+    "uniqueConstraints": [
+        {
+            "name": "uq_customers_uid",
+            "columns": [
+                "uid",
+                "created_at"
+            ],
+            "nullsNotDistinct": false
+        }
+    ],
+    "checkConstraints": [
+        {
+            "name": "ck_customers_visits_nonnegative",
+            "expression": "visit_count >= 0",
+            "columns": [
+                "visit_count"
+            ]
         }
     ],
     "indexes": [

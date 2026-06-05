@@ -74,6 +74,18 @@
                 "$ref": "#/definitions/index"
             }
         },
+        "uniqueConstraints": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/uniqueConstraint"
+            }
+        },
+        "checkConstraints": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/checkConstraint"
+            }
+        },
         "tableProperties": {
             "type": "object",
             "additionalProperties": {
@@ -158,6 +170,58 @@
                 "where": {
                     "type": "string",
                     "minLength": 1
+                }
+            }
+        },
+        "uniqueConstraint": {
+            "type": "object",
+            "required": [
+                "name",
+                "columns"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "columns": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "nullsNotDistinct": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "checkConstraint": {
+            "type": "object",
+            "required": [
+                "name",
+                "expression",
+                "columns"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "expression": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "columns": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    }
                 }
             }
         },

@@ -41,6 +41,14 @@ test('loads the example root cleanly', () => {
     expect(customers?.definition.indexes[0].include).toEqual([
         'is_active',
     ]);
+    expect(customers?.definition.uniqueConstraints).toHaveLength(1);
+    expect(customers?.definition.uniqueConstraints[0].columns).toEqual([
+        'email',
+    ]);
+    expect(customers?.definition.checkConstraints).toHaveLength(1);
+    expect(customers?.definition.checkConstraints[0].columns).toEqual([
+        'lifetime_value',
+    ]);
 });
 
 test('reports a JSON parse error', () => {
