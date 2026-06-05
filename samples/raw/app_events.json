@@ -1,0 +1,134 @@
+{
+    "$schema": "https://raw.githubusercontent.com/ksco92/eevee/main/packages/core/src/schema/table.schema.json",
+    "specVersion": "0",
+    "description": "Raw mobile app events as landed (Iceberg/Parquet).",
+    "tableType": "iceberg_parquet",
+    "isRawData": true,
+    "columns": [
+        {
+            "name": "event_id",
+            "type": "long",
+            "description": "Unique event identifier."
+        },
+        {
+            "name": "user_id",
+            "type": "long",
+            "description": "User the event belongs to."
+        },
+        {
+            "name": "region",
+            "type": "string",
+            "description": "Region code."
+        },
+        {
+            "name": "email",
+            "type": "string",
+            "description": "User email."
+        },
+        {
+            "name": "event_ts",
+            "type": "timestamp",
+            "description": "Event timestamp (no zone)."
+        },
+        {
+            "name": "event_date",
+            "type": "date",
+            "description": "Event calendar date."
+        },
+        {
+            "name": "created_tz",
+            "type": "timestamptz",
+            "description": "Creation timestamp (UTC)."
+        },
+        {
+            "name": "session_dur",
+            "type": "time",
+            "description": "Session duration as a time of day."
+        },
+        {
+            "name": "amount",
+            "type": "decimal(12,4)",
+            "description": "Monetary amount."
+        },
+        {
+            "name": "token",
+            "type": "uuid",
+            "description": "Idempotency token."
+        },
+        {
+            "name": "hash",
+            "type": "fixed[16]",
+            "description": "Fixed-width content hash."
+        },
+        {
+            "name": "raw_bytes",
+            "type": "binary",
+            "description": "Raw event bytes."
+        },
+        {
+            "name": "active",
+            "type": "boolean",
+            "description": "Whether the session was active."
+        },
+        {
+            "name": "count",
+            "type": "int",
+            "description": "Event count."
+        },
+        {
+            "name": "ratio",
+            "type": "float",
+            "description": "Sampling ratio."
+        },
+        {
+            "name": "total",
+            "type": "double",
+            "description": "Running total."
+        }
+    ],
+    "primaryKey": [
+        "event_id"
+    ],
+    "partitions": [
+        {
+            "name": "event_date",
+            "type": "year",
+            "description": "Year of the event date."
+        },
+        {
+            "name": "event_ts",
+            "type": "month",
+            "description": "Month of the event timestamp."
+        },
+        {
+            "name": "event_ts",
+            "type": "day",
+            "description": "Day of the event timestamp (a second transform on the same column)."
+        },
+        {
+            "name": "created_tz",
+            "type": "hour",
+            "description": "Hour of the creation timestamp."
+        },
+        {
+            "name": "user_id",
+            "type": "bucket[16]",
+            "description": "Hash-bucket the user id into 16 buckets."
+        },
+        {
+            "name": "email",
+            "type": "truncate[8]",
+            "description": "Truncate the email to 8 characters."
+        },
+        {
+            "name": "region",
+            "type": "identity",
+            "description": "Partition by the region value unchanged."
+        },
+        {
+            "name": "user_id",
+            "type": "void",
+            "description": "Always-null partition (spec-evolution placeholder) on the user id."
+        }
+    ]
+}

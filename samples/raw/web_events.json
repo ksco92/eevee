@@ -1,0 +1,104 @@
+{
+    "$schema": "https://raw.githubusercontent.com/ksco92/eevee/main/packages/core/src/schema/table.schema.json",
+    "specVersion": "0",
+    "description": "Raw web clickstream events as landed (Hive/Parquet).",
+    "tableType": "hive_parquet",
+    "isRawData": true,
+    "columns": [
+        {
+            "name": "event_id",
+            "type": "bigint",
+            "description": "Unique event identifier."
+        },
+        {
+            "name": "level",
+            "type": "tinyint",
+            "description": "Log level code."
+        },
+        {
+            "name": "status_code",
+            "type": "int",
+            "description": "HTTP status code."
+        },
+        {
+            "name": "score",
+            "type": "double",
+            "description": "Engagement score."
+        },
+        {
+            "name": "ratio",
+            "type": "float",
+            "description": "Sampling ratio."
+        },
+        {
+            "name": "amount",
+            "type": "decimal(10,2)",
+            "description": "Transaction amount."
+        },
+        {
+            "name": "user_agent",
+            "type": "string",
+            "description": "Raw user-agent header."
+        },
+        {
+            "name": "label",
+            "type": "varchar(255)",
+            "description": "Event label."
+        },
+        {
+            "name": "country",
+            "type": "char(2)",
+            "description": "ISO country code."
+        },
+        {
+            "name": "is_bot",
+            "type": "boolean",
+            "description": "Whether the request looked automated."
+        },
+        {
+            "name": "payload",
+            "type": "binary",
+            "description": "Raw payload bytes."
+        },
+        {
+            "name": "ingested_at",
+            "type": "timestamp",
+            "description": "Ingestion timestamp."
+        },
+        {
+            "name": "event_day",
+            "type": "date",
+            "description": "Event calendar date."
+        },
+        {
+            "name": "tags",
+            "type": "array<string>",
+            "description": "Free-form tags."
+        },
+        {
+            "name": "attributes",
+            "type": "map<string,int>",
+            "description": "Numeric attribute bag."
+        },
+        {
+            "name": "geo",
+            "type": "struct<lat:double,lon:double>",
+            "description": "Resolved geo coordinates."
+        },
+        {
+            "name": "mixed",
+            "type": "uniontype<int,string>",
+            "description": "Either a code or a label."
+        }
+    ],
+    "primaryKey": [
+        "event_id"
+    ],
+    "partitions": [
+        {
+            "name": "load_date",
+            "type": "date",
+            "description": "Daily ingestion partition (a new Hive partition column)."
+        }
+    ]
+}

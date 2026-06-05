@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="flexdataset",
-    version="0.4.2",
+    version="0.4.3",
     description="Python client for the Flexible Dataset Definition (FDD) validator.",
     license="Apache-2.0",
     author="Rodrigo Carvajal",

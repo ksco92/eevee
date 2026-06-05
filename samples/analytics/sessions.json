@@ -1,0 +1,70 @@
+{
+    "$schema": "https://raw.githubusercontent.com/ksco92/eevee/main/packages/core/src/schema/table.schema.json",
+    "specVersion": "0",
+    "description": "One row per user session (Iceberg/Parquet).",
+    "tableType": "iceberg_parquet",
+    "isRawData": false,
+    "columns": [
+        {
+            "name": "session_id",
+            "type": "long",
+            "description": "Surrogate session key."
+        },
+        {
+            "name": "session_token",
+            "type": "string",
+            "description": "Opaque session token (unique, but not the primary key)."
+        },
+        {
+            "name": "src_event_id",
+            "type": "long",
+            "description": "Originating raw app event."
+        },
+        {
+            "name": "user_id",
+            "type": "long",
+            "description": "User the session belongs to."
+        },
+        {
+            "name": "started_at",
+            "type": "timestamp",
+            "description": "Session start."
+        },
+        {
+            "name": "ended_at",
+            "type": "timestamptz",
+            "description": "Session end (UTC)."
+        },
+        {
+            "name": "bytes_sent",
+            "type": "long",
+            "description": "Bytes transferred."
+        }
+    ],
+    "primaryKey": [
+        "session_id"
+    ],
+    "partitions": [
+        {
+            "name": "started_at",
+            "type": "day",
+            "description": "Daily partition derived from the session start."
+        },
+        {
+            "name": "user_id",
+            "type": "bucket[8]",
+            "description": "Hash-bucket the user id into 8 buckets."
+        }
+    ],
+    "dependsOn": [
+        "raw.app_events"
+    ],
+    "foreignKeys": [
+        {
+            "sourceTable": "raw.app_events",
+            "sourceColumn": "event_id",
+            "localColumn": "src_event_id",
+            "allowNulls": false
+        }
+    ]
+}
