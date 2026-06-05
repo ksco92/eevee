@@ -1,5 +1,10 @@
 name: Release
 
+# Tagged full releases: build the standalone binaries, attach them to the
+# GitHub release, and publish the PyPI wheels. npm is NOT here — it ships
+# continuously from `main` via publish.yml. Push a `v<version>` tag to cut a
+# release once the matching version has been merged.
+
 on:
   push:
     tags:
@@ -41,27 +46,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: packages/core/dist-bin/*
-
-  npm:
-    needs: binaries
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          registry-url: 'https://registry.npmjs.org'
-          cache: npm
-          cache-dependency-path: packages/core/package-lock.json
-      - working-directory: packages/core
-        run: npm ci
-      - working-directory: packages/core
-        run: npm run build
-      - working-directory: packages/core
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   pypi:
     needs: binaries
