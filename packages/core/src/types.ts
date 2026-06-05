@@ -174,6 +174,30 @@ const POSTGRES_PARAM_ALLOWED: ReadonlySet<string> = new Set([
     'interval',
 ]);
 
+const POSTGRES_COLLATABLE: ReadonlySet<string> = new Set([
+    'text',
+    'varchar',
+    'character varying',
+    'char',
+    'character',
+    'bpchar',
+]);
+
+/**
+ * Whether a Postgres column type is collatable (a text/character type), so a
+ * `COLLATE` clause is legal on it. Array and length markers are stripped first.
+ *
+ * @param typeStr Column type string.
+ * @returns True when the base type is a collatable text type.
+ */
+export function isPostgresCollatableType(typeStr: string): boolean {
+    let type = typeStr.trim().toLowerCase().replace(/\s+/g, ' ');
+    type = type.replace(/(\s*\[\s*\d*\s*\])+$/, '').trim();
+    const paramMatch = /^(.*?)\([^)]*\)$/.exec(type);
+    const base = paramMatch ? paramMatch[1].trim() : type;
+    return POSTGRES_COLLATABLE.has(base);
+}
+
 /** Whether the string is a valid Postgres 18 column type. */
 export function isValidPostgresType(typeStr: string): boolean {
     let type = typeStr.trim().toLowerCase().replace(/\s+/g, ' ');

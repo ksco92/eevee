@@ -77,7 +77,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `tableType` | yes | `hive_parquet` \| `iceberg_parquet` \| `postgres_18`. |
 | `isRawData` | yes | `true` marks the top of the pipeline. |
 | `formatVersion` | no | Iceberg only: the table format version (`1`, `2`, or `3`). Other engines ignore it. |
-| `columns` | yes | Non-empty; each has `name`, `type`, `description`, an optional `nullable`, and optional Postgres column attributes (`generated`/`expression`/`expressionColumns`, `identity`, `default`). `type` validated per engine. |
+| `columns` | yes | Non-empty; each has `name`, `type`, `description`, an optional `nullable`, and optional Postgres column attributes (`generated`/`expression`/`expressionColumns`, `identity`, `default`, `collation`, `compression`, `storage`). `type` validated per engine. |
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
 | `partitions` | no | Engine-specific semantics (see below). |
 | `sortOrder` | no | Iceberg only: ordered sort fields (`column`, optional `transform`, `direction`, `nullOrder`). Other engines ignore it. |
@@ -232,6 +232,18 @@ opaque **`default`**:
   (`smallint`/`integer`/`bigint`).
 - **`POSTGRES_COLUMN_GENERATION_EXCLUSIVE`** (error) — a column has at most one of `generated`,
   `identity`, or `default` (Postgres makes the three mutually exclusive).
+
+A Postgres column may also carry an opaque `collation` name and per-column TOAST `compression` /
+`storage`:
+
+- **`POSTGRES_COLLATION_ON_TEXT_TYPE`** (error) — `collation` is only legal on a text type
+  (`text`/`varchar`/`char`/…). The collation name itself is environment-specific and stays opaque.
+- **`POSTGRES_COMPRESSION_VALID`** (error) — `compression` is `pglz` or `lz4`.
+- **`POSTGRES_STORAGE_VALID`** (error) — `storage` is one of
+  `plain`/`external`/`extended`/`main`/`default`.
+
+(The further Postgres rule that `compression`/`external` storage applies only to variable-width
+TOAST-able types is out of scope for v0 — the value-domain checks above are the high-signal part.)
 
 ### Partitions per engine
 
