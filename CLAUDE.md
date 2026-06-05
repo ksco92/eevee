@@ -155,10 +155,17 @@ machine-specific `@import`, since this repo is public):
 - The CLI compiles to a standalone, dependency-free binary with
   `bun build src/cli.ts --compile` (the wasm Graphviz renderer is bundled in). One
   bun host cross-compiles every target (linux x64/arm64, macOS x64/arm64, windows x64).
-- `.github/workflows/release.yml` runs on a `v*` tag: it builds the binaries and
-  attaches them to the GitHub release, publishes the npm package, and builds one
-  PyPI wheel per platform (each bundling its binary, via
-  `packages/python/scripts/build_wheels.sh`) plus a pure sdist.
+- **npm publishes continuously from `main`** via `.github/workflows/publish.yml`:
+  every push to `main` publishes `flexdataset` IF its `packages/core/package.json`
+  version is newer than the registry, using npm trusted publishing (OIDC — no
+  `NPM_TOKEN`; configure the trusted publisher for `flexdataset` at npmjs.com with
+  repo `ksco92/eevee`, workflow `publish.yml`, branch `main`). This is why every PR
+  bumps the version.
+- **Tagged releases** via `.github/workflows/release.yml` (on a `v*` tag) build the
+  per-platform binaries and attach them to the GitHub release, and publish one PyPI
+  wheel per platform (each bundling its binary, via
+  `packages/python/scripts/build_wheels.sh`) plus a pure sdist. PyPI publishing is
+  enabled after M4 (needs `PYPI_API_TOKEN`).
 - Non-core languages consume the CLI; the Python client resolves `FDD_BINARY` or a
   bundled binary. Validation logic is never reimplemented per language.
 

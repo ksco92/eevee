@@ -1,5 +1,13 @@
 # eevee — Flexible Dataset Definition (FDD)
 
+[![CI](https://img.shields.io/github/actions/workflow/status/ksco92/eevee/ci.yml?branch=main&label=CI)](https://github.com/ksco92/eevee/actions/workflows/ci.yml)
+[![coverage](https://codecov.io/gh/ksco92/eevee/branch/main/graph/badge.svg)](https://codecov.io/gh/ksco92/eevee)
+[![npm](https://img.shields.io/npm/v/flexdataset.svg)](https://www.npmjs.com/package/flexdataset)
+[![types](https://img.shields.io/npm/types/flexdataset.svg)](https://www.npmjs.com/package/flexdataset)
+[![downloads](https://img.shields.io/npm/dw/flexdataset.svg)](https://www.npmjs.com/package/flexdataset)
+[![last commit](https://img.shields.io/github/last-commit/ksco92/eevee.svg)](https://github.com/ksco92/eevee/commits/main)
+[![license](https://img.shields.io/npm/l/flexdataset.svg)](LICENSE)
+
 FDD is a JSON standard for describing datasets (tables) as files in a structured folder layout, so
 datasets can be versioned, reviewed, and consumed as first-class citizens in code repositories and
 infrastructure-as-code. Relational databases and lakehouses share a lot (primary keys, foreign keys,
