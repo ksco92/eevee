@@ -80,6 +80,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `columns` | yes | Non-empty; each has `name`, `type`, `description`, and an optional `nullable`. `type` validated per engine. |
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
 | `partitions` | no | Engine-specific semantics (see below). |
+| `tableProperties` | no | String→string map of engine settings. Only keys with a closed legal domain are validated per engine (see below); unknown keys pass through. |
 | `dependsOn` | conditionally | Required & non-empty when `isRawData` is `false`. Entries are `schema.table`. |
 | `foreignKeys` | no | Each: `sourceTable` (`schema.table`), `sourceColumn`, `localColumn`, `allowNulls`. |
 
@@ -99,6 +100,25 @@ nullability is unspecified and the cross-checks below do not fire.
 An Iceberg table may declare a `formatVersion` of `1`, `2`, or `3`
 (**`ICEBERG_FORMAT_VERSION_VALID`**, error, when out of range). It is optional and engine-specific;
 non-Iceberg engines ignore the field.
+
+### Table properties
+
+`tableProperties` is an optional string→string map of engine settings. Only keys with a known, closed
+legal domain are validated; unknown keys pass through untouched, so engine-specific tuning is never
+blocked. Values are strings (matching how engines store them).
+
+For `iceberg_parquet` the validated keys are:
+
+- **Enums** (**`ICEBERG_PROPERTY_ENUM_VALID`**, error) — `write.format.default`
+  (`parquet`/`avro`/`orc`), `write.parquet.compression-codec` (`zstd`/`gzip`/`snappy`/`lz4`/`none`),
+  `write.avro.compression-codec` (`gzip`/`zstd`/`snappy`/`uncompressed`), `write.orc.compression-codec`
+  (`zstd`/`lz4`/`lzo`/`zlib`/`snappy`/`none`), `write.distribution-mode` (`none`/`hash`/`range`),
+  `write.metadata.compression-codec` (`none`/`gzip`).
+- **Positive integers** (**`ICEBERG_PROPERTY_POSITIVE_INT`**, error) — `write.target-file-size-bytes`
+  (compaction target), `history.expire.max-snapshot-age-ms`, `history.expire.min-snapshots-to-keep`,
+  `history.expire.max-ref-age-ms` (snapshot retention), `write.metadata.previous-versions-max`.
+- **Bounded integer** (**`ICEBERG_PROPERTY_INT_RANGE`**, error) — `write.parquet.compression-level`
+  (1–22).
 
 ### Partitions per engine
 

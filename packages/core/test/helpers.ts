@@ -48,6 +48,7 @@ export interface TableInput {
     columns?: Column[];
     primaryKey?: string[];
     partitions?: Partition[];
+    tableProperties?: Record<string, string>;
     dependsOn?: string[];
     foreignKeys?: ForeignKey[];
     structurallyValid?: boolean;
@@ -72,6 +73,7 @@ export function makeTable(input: TableInput): TableTypeBase {
             columns: input.columns ?? [],
             primaryKey: input.primaryKey ?? [],
             partitions: input.partitions ?? [],
+            tableProperties: input.tableProperties ?? {},
             dependsOn: input.dependsOn ?? [],
             foreignKeys: input.foreignKeys ?? [],
         },

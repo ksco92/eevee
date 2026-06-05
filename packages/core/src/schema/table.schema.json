@@ -62,6 +62,12 @@
                 "$ref": "#/definitions/column"
             }
         },
+        "tableProperties": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "string"
+            }
+        },
         "dependsOn": {
             "type": "array",
             "items": {

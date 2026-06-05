@@ -93,6 +93,20 @@ function normalizePartitions(value: unknown): Partition[] {
     });
 }
 
+function normalizeStringMap(value: unknown): Record<string, string> {
+    const record = asRecord(value);
+    const result: Record<string, string> = {};
+    for (const [
+        key,
+        raw,
+    ] of Object.entries(record)) {
+        if (typeof raw === 'string') {
+            result[key] = raw;
+        }
+    }
+    return result;
+}
+
 function normalizeForeignKeys(value: unknown): ForeignKey[] {
     return asArray(value).map((raw) => {
         const record = asRecord(raw);
@@ -116,6 +130,7 @@ function normalizeTableDefinition(raw: unknown): TableDefinition {
         columns: normalizeColumns(record.columns),
         primaryKey: asStringArray(record.primaryKey),
         partitions: normalizePartitions(record.partitions),
+        tableProperties: normalizeStringMap(record.tableProperties),
         dependsOn: asStringArray(record.dependsOn),
         foreignKeys: normalizeForeignKeys(record.foreignKeys),
     };

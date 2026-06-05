@@ -59,6 +59,9 @@ test('normalizes a structurally invalid table without throwing', () => {
     expect(table?.definition.columns[0].name).toBe('');
     expect(table?.definition.columns[1].name).toBe('a');
     expect(table?.definition.partitions).toHaveLength(0);
+    expect(table?.definition.tableProperties).toEqual({
+        'good.key': 'ok',
+    });
     expect(table?.definition.primaryKey).toEqual([
         'a',
     ]);
