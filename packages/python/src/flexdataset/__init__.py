@@ -4,7 +4,7 @@ from flexdataset.binary import FddBinaryNotFoundError, resolve_binary
 from flexdataset.client import FddClient, FddError, er, graph, validate
 from flexdataset.models import ValidationResult, Violation
 
-__version__ = "0.21.2"
+__version__ = "0.22.0"
 
 __all__ = [
     "FddBinaryNotFoundError",

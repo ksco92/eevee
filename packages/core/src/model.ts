@@ -11,14 +11,14 @@
 /** Table engine. Each value unlocks engine-specific semantic checks. */
 export enum TableType {
     HIVE_PARQUET = 'hive_parquet',
-    ICEBERG_PARQUET = 'iceberg_parquet',
+    ICEBERG_PARQUET_V2 = 'iceberg_parquet_v2',
     POSTGRES_18 = 'postgres_18',
 }
 
 /** Every known `tableType` string, for membership checks. */
 export const TABLE_TYPES: readonly string[] = [
     TableType.HIVE_PARQUET,
-    TableType.ICEBERG_PARQUET,
+    TableType.ICEBERG_PARQUET_V2,
     TableType.POSTGRES_18,
 ];
 
@@ -275,8 +275,9 @@ export interface TableDefinition {
     readonly isRawData: boolean;
 
     /**
-     * Iceberg table format version (1, 2, or 3). Optional and engine-specific:
-     * only the Iceberg engine validates it. Other engines ignore it.
+     * Iceberg table format version. Optional and engine-specific: only the
+     * Iceberg engine validates it, and on `iceberg_parquet_v2` it must be `2`
+     * when present. Other engines ignore it.
      */
     readonly formatVersion?: number;
 

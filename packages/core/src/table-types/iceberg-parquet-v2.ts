@@ -1,9 +1,13 @@
 /**
- * Iceberg (parquet) table type.
+ * Iceberg (parquet) format-version-2 table type.
  *
  * Iceberg partitions are transforms applied to a data column, so duplicate
  * detection keys on the (source column, normalized transform) pair — `year(ts)`
  * and `month(ts)` are distinct, while `day` and `DAY` collapse.
+ *
+ * The format version is encoded in the `tableType` discriminator: this engine is
+ * inherently v2, so a present `formatVersion` must equal `EXPECTED_FORMAT_VERSION`.
+ * A future `iceberg_parquet_v3` sibling subclass overrides that one constant.
  */
 
 import {
@@ -59,8 +63,14 @@ function isIntegerInRange(value: string, min: number, max: number): boolean {
     return parsed >= min && parsed <= max;
 }
 
-/** Iceberg (parquet) table. */
-export class IcebergParquetTable extends TableTypeBase {
+/** Iceberg (parquet) format-version-2 table. */
+export class IcebergParquetV2Table extends TableTypeBase {
+    /**
+     * The Iceberg format version this engine pins to. A present `formatVersion`
+     * must equal this. A future v3 sibling subclass overrides this single value.
+     */
+    protected static readonly EXPECTED_FORMAT_VERSION = 2;
+
     /**
      * Validate a column type against the Iceberg v0 type registry.
      *
@@ -137,13 +147,6 @@ export class IcebergParquetTable extends TableTypeBase {
 
         return violations;
     }
-
-    /// The Iceberg format versions this validator understands.
-    private static readonly FORMAT_VERSIONS = new Set([
-        1,
-        2,
-        3,
-    ]);
 
     /// Table-property keys whose value must come from a closed set.
     private static readonly ENUM_PROPERTIES: Record<string, readonly string[]> = {
@@ -267,7 +270,7 @@ export class IcebergParquetTable extends TableTypeBase {
         });
 
         sortOrder.forEach((field, index) => {
-            if (!IcebergParquetTable.SORT_DIRECTIONS.has(field.direction)) {
+            if (!IcebergParquetV2Table.SORT_DIRECTIONS.has(field.direction)) {
                 violations.push(this.violation({
                     level: 'error',
                     code: 'ICEBERG_SORT_DIRECTION_VALID',
@@ -275,7 +278,7 @@ export class IcebergParquetTable extends TableTypeBase {
                     message: `sort direction "${field.direction}" must be "asc" or "desc"`,
                 }));
             }
-            if (!IcebergParquetTable.SORT_NULL_ORDERS.has(field.nullOrder)) {
+            if (!IcebergParquetV2Table.SORT_NULL_ORDERS.has(field.nullOrder)) {
                 violations.push(this.violation({
                     level: 'error',
                     code: 'ICEBERG_SORT_NULL_ORDER_VALID',
@@ -341,12 +344,14 @@ export class IcebergParquetTable extends TableTypeBase {
         return `${field.column} ${normalizedTransform}`;
     }
 
-    /// ICEBERG_FORMAT_VERSION_VALID — `formatVersion`, when set, is 1, 2, or 3.
+    /// ICEBERG_FORMAT_VERSION_VALID — `formatVersion`, when set, equals the
+    /// version this engine pins to (2 for `iceberg_parquet_v2`).
     private formatVersionViolations(): Violation[] {
         const {
             formatVersion,
         } = this.definition;
-        if (formatVersion === undefined || IcebergParquetTable.FORMAT_VERSIONS.has(formatVersion)) {
+        const expected = (this.constructor as typeof IcebergParquetV2Table).EXPECTED_FORMAT_VERSION;
+        if (formatVersion === undefined || formatVersion === expected) {
             return [];
         }
         return [
@@ -354,7 +359,7 @@ export class IcebergParquetTable extends TableTypeBase {
                 level: 'error',
                 code: 'ICEBERG_FORMAT_VERSION_VALID',
                 field: 'formatVersion',
-                message: `Iceberg formatVersion "${formatVersion}" must be 1, 2, or 3`,
+                message: `Iceberg formatVersion "${formatVersion}" must be ${expected}`,
             }),
         ];
     }
@@ -377,7 +382,7 @@ export class IcebergParquetTable extends TableTypeBase {
             key,
             value,
         ] of Object.entries(properties)) {
-            const allowed = IcebergParquetTable.ENUM_PROPERTIES[key];
+            const allowed = IcebergParquetV2Table.ENUM_PROPERTIES[key];
             if (allowed !== undefined && !allowed.includes(value)) {
                 violations.push(this.violation({
                     level: 'error',
@@ -387,7 +392,7 @@ export class IcebergParquetTable extends TableTypeBase {
                 }));
             }
 
-            if (IcebergParquetTable.POSITIVE_INT_PROPERTIES.includes(key) && !isPositiveInteger(value)) {
+            if (IcebergParquetV2Table.POSITIVE_INT_PROPERTIES.includes(key) && !isPositiveInteger(value)) {
                 violations.push(this.violation({
                     level: 'error',
                     code: 'ICEBERG_PROPERTY_POSITIVE_INT',
@@ -396,7 +401,7 @@ export class IcebergParquetTable extends TableTypeBase {
                 }));
             }
 
-            if (IcebergParquetTable.NON_NEGATIVE_INT_PROPERTIES.includes(key) && !isNonNegativeInteger(value)) {
+            if (IcebergParquetV2Table.NON_NEGATIVE_INT_PROPERTIES.includes(key) && !isNonNegativeInteger(value)) {
                 violations.push(this.violation({
                     level: 'error',
                     code: 'ICEBERG_PROPERTY_NON_NEGATIVE_INT',
@@ -405,7 +410,7 @@ export class IcebergParquetTable extends TableTypeBase {
                 }));
             }
 
-            const range = IcebergParquetTable.INT_RANGE_PROPERTIES[key];
+            const range = IcebergParquetV2Table.INT_RANGE_PROPERTIES[key];
             if (range !== undefined && !isIntegerInRange(value, range.min, range.max)) {
                 violations.push(this.violation({
                     level: 'error',
@@ -453,11 +458,12 @@ export class IcebergParquetTable extends TableTypeBase {
 
     /**
      * Validate Iceberg identifier fields (the row-identity / equality-delete
-     * key). Equality deletes are a format-version 2+ feature, and identifier
-     * fields must be required primitive columns that are not float/double.
+     * key). Equality deletes are a v2 feature, which this engine inherently is;
+     * identifier fields must be required primitive columns that are not
+     * float/double.
      *
-     * Emits `ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2`, `ICEBERG_IDENTIFIER_COLUMN_EXISTS`,
-     * `ICEBERG_IDENTIFIER_REQUIRED`, and `ICEBERG_IDENTIFIER_TYPE_PRIMITIVE`.
+     * Emits `ICEBERG_IDENTIFIER_COLUMN_EXISTS`, `ICEBERG_IDENTIFIER_REQUIRED`,
+     * and `ICEBERG_IDENTIFIER_TYPE_PRIMITIVE`.
      *
      * @returns Every identifier-field violation.
      */
@@ -465,20 +471,10 @@ export class IcebergParquetTable extends TableTypeBase {
         const violations: Violation[] = [];
         const {
             identifierFields,
-            formatVersion,
         } = this.definition;
 
         if (identifierFields.length === 0) {
             return [];
-        }
-
-        if (formatVersion === 1) {
-            violations.push(this.violation({
-                level: 'error',
-                code: 'ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2',
-                field: 'identifierFields',
-                message: 'identifier fields require formatVersion 2 or higher (equality deletes are a v2 feature)',
-            }));
         }
 
         identifierFields.forEach((name, index) => {
