@@ -11,11 +11,9 @@ import * as fs from 'fs';
 
 import {
     formatViolation,
+    loadValidatedRoot,
     validateRoot,
 } from './validate';
-import {
-    loadRoot, 
-} from './loader';
 import {
     buildDagDot, 
 } from './diagram/dag';
@@ -127,7 +125,9 @@ async function runDiagram(command: 'graph' | 'er', rest: string[]): Promise<numb
     }
 
     try {
-        const world = loadRoot(root).world;
+        const world = loadValidatedRoot(root, {
+            onWarning: (warning) => console.warn(formatViolation(warning)),
+        });
         const dot = command === 'graph' ? buildDagDot(world) : buildErDot(world);
         const svg = await renderDot(dot);
         if (out) {

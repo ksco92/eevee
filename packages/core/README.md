@@ -23,7 +23,8 @@ flexdataset er <root> --out er.svg          # entity-relationship diagram
 ```
 
 `validate` exits non-zero when there are error-level violations. The `graph` and `er` commands render
-SVG via WASM Graphviz (no system Graphviz needed).
+SVG via WASM Graphviz (no system Graphviz needed); they validate the root first and abort with a
+non-zero exit if it has error-level violations, so a diagram is only produced for a valid dataset.
 
 ## License
 

@@ -69,6 +69,10 @@ is needed):
 Both write the SVG to stdout, or to a file with `--out <file.svg>` (in which case a short confirmation
 goes to stderr). Output is deterministic, so a committed SVG diffs cleanly when the dataset changes.
 
+Both commands validate the root first (structural + semantic): an error-level violation aborts
+rendering, printing the violations to stderr and exiting non-zero, so a diagram is only ever produced
+for a valid dataset. Warnings are printed to stderr but do not stop rendering.
+
 ## Development
 
 ```bash
