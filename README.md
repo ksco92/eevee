@@ -25,7 +25,7 @@ The standard itself lives in [`spec/`](spec/README.md). The reference validator 
   and foreign-key resolution, `dependsOn` ↔ foreign-key consistency, Iceberg transform legality, and an
   acyclic dependency graph. Implemented once in TypeScript and exposed through the `flexdataset` CLI and library.
 
-v0 supports three engines: `hive_parquet`, `iceberg_parquet`, `postgres_18`.
+v0 supports three engines: `hive_parquet`, `iceberg_parquet_v2`, `postgres_18`.
 
 ## Install
 

@@ -31,7 +31,7 @@
             "type": "string",
             "enum": [
                 "hive_parquet",
-                "iceberg_parquet",
+                "iceberg_parquet_v2",
                 "postgres_18"
             ]
         },

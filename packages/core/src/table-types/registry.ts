@@ -15,8 +15,8 @@ import {
     HiveParquetTable,
 } from './hive-parquet';
 import {
-    IcebergParquetTable,
-} from './iceberg-parquet';
+    IcebergParquetV2Table,
+} from './iceberg-parquet-v2';
 import {
     Postgres18Table,
 } from './postgres-18';
@@ -27,7 +27,7 @@ type TableTypeConstructor = new (fields: TableTypeFields) => TableTypeBase;
 /// Exhaustive map: every value of the `TableType` enum has a concrete subclass.
 const REGISTRY: Record<TableType, TableTypeConstructor> = {
     [TableType.HIVE_PARQUET]: HiveParquetTable,
-    [TableType.ICEBERG_PARQUET]: IcebergParquetTable,
+    [TableType.ICEBERG_PARQUET_V2]: IcebergParquetV2Table,
     [TableType.POSTGRES_18]: Postgres18Table,
 };
 

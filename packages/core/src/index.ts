@@ -29,8 +29,8 @@ export {
     HiveParquetTable,
 } from './table-types/hive-parquet';
 export {
-    IcebergParquetTable,
-} from './table-types/iceberg-parquet';
+    IcebergParquetV2Table,
+} from './table-types/iceberg-parquet-v2';
 export {
     Postgres18Table,
 } from './table-types/postgres-18';

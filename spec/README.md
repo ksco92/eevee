@@ -4,7 +4,7 @@ FDD describes datasets (tables) as JSON files in a structured folder layout, so 
 versioned, reviewed, and consumed as first-class citizens in code repos and infrastructure-as-code.
 
 A `tableType` selects the engine; engine-specific checks follow from it. v0 supports three:
-`hive_parquet`, `iceberg_parquet`, `postgres_18`.
+`hive_parquet`, `iceberg_parquet_v2`, `postgres_18`.
 
 ## Folder structure
 
@@ -45,7 +45,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
     "$schema": "https://raw.githubusercontent.com/ksco92/eevee/main/packages/core/src/schema/table.schema.json",
     "specVersion": "0",
     "description": "One row per customer.",
-    "tableType": "iceberg_parquet",
+    "tableType": "iceberg_parquet_v2",
     "isRawData": false,
     "columns": [
         { "name": "customer_id", "type": "long", "description": "Surrogate key." },
@@ -74,9 +74,9 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 |---|---|---|
 | `specVersion` | yes | `"0"` for this version. |
 | `description` | yes | Non-empty. |
-| `tableType` | yes | `hive_parquet` \| `iceberg_parquet` \| `postgres_18`. |
+| `tableType` | yes | `hive_parquet` \| `iceberg_parquet_v2` \| `postgres_18`. |
 | `isRawData` | yes | `true` marks the top of the pipeline. |
-| `formatVersion` | no | Iceberg only: the table format version (`1`, `2`, or `3`). Other engines ignore it. |
+| `formatVersion` | no | Iceberg only: the table format version. On `iceberg_parquet_v2` it must be `2` when present. Other engines ignore it. |
 | `columns` | yes | Non-empty; each has `name`, `type`, `description`, an optional `nullable`, and optional Postgres column attributes (`generated`/`expression`/`expressionColumns`, `identity`, `default`, `collation`, `compression`, `storage`). `type` validated per engine. |
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
 | `partitions` | no | Engine-specific semantics (see below). |
@@ -106,9 +106,10 @@ nullability is unspecified and the cross-checks below do not fire.
 
 ### Format version (Iceberg)
 
-An Iceberg table may declare a `formatVersion` of `1`, `2`, or `3`
-(**`ICEBERG_FORMAT_VERSION_VALID`**, error, when out of range). It is optional and engine-specific;
-non-Iceberg engines ignore the field.
+The Iceberg format version is encoded in the `tableType` itself: `iceberg_parquet_v2` is a format
+version 2 table. The optional `formatVersion` field, when present, must match — on
+`iceberg_parquet_v2` it must be exactly `2` (**`ICEBERG_FORMAT_VERSION_VALID`**, error, when it is
+anything else). It is engine-specific; non-Iceberg engines ignore the field.
 
 ### Sort order (Iceberg)
 
@@ -130,10 +131,9 @@ The field is engine-specific; non-Iceberg engines ignore it.
 ### Identifier fields (Iceberg)
 
 An Iceberg table may declare `identifierFields`: the columns that identify a row (the equality-delete
-key). Checks:
+key). Equality deletes are a format-version 2 feature, which `iceberg_parquet_v2` inherently is, so
+identifier fields are always allowed on it. Checks:
 
-- **`ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2`** (error) — identifier fields are an equality-delete feature, so
-  setting them with `formatVersion: 1` is invalid (an unspecified format version is allowed).
 - **`ICEBERG_IDENTIFIER_COLUMN_EXISTS`** (error) — each identifier field exists in `columns`.
 - **`ICEBERG_IDENTIFIER_REQUIRED`** (error) — an identifier field declared `nullable: true` is invalid;
   identifier fields must be required.
@@ -199,7 +199,7 @@ The element `operator` stays opaque. The field is engine-specific; non-Postgres 
 legal domain are validated; unknown keys pass through untouched, so engine-specific tuning is never
 blocked. Values are strings (matching how engines store them).
 
-For `iceberg_parquet` the validated keys are:
+For `iceberg_parquet_v2` the validated keys are:
 
 - **Enums** (**`ICEBERG_PROPERTY_ENUM_VALID`**, error) — `write.format.default`
   (`parquet`/`avro`/`orc`), `write.parquet.compression-codec` (`zstd`/`gzip`/`snappy`/`lz4`/`none`),
@@ -306,7 +306,7 @@ TOAST-able types is out of scope for v0 — the value-domain checks above are th
 
 - **`hive_parquet`** — each partition is a **new** partition column: `name` must NOT be a data column,
   `type` is a normal Hive type (no transforms).
-- **`iceberg_parquet`** — each partition derives from a data column: `name` is the **source column**
+- **`iceberg_parquet_v2`** — each partition derives from a data column: `name` is the **source column**
   (must exist in `columns`), `type` is an Iceberg **transform**
   (`identity`, `year`, `month`, `day`, `hour`, `void`, `bucket[N]`, `truncate[W]`). The transform must
   be legal on the source column's type (e.g. `hour` needs a timestamp). Multiple partitions may share

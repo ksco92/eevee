@@ -356,7 +356,7 @@ test('ICEBERG_TRANSFORM_SOURCE_EXISTS fires when the source column is missing', 
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             columns: [
                 col('a', 'long'),
             ],
@@ -375,7 +375,7 @@ test('ICEBERG_TRANSFORM_VALID fires on an unknown transform', () => {
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             columns: [
                 col('ts', 'timestamp'),
                 col('a', 'long'),
@@ -395,7 +395,7 @@ test('ICEBERG_TRANSFORM_SOURCE_TYPE_LEGAL fires when a transform is illegal on t
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             columns: [
                 col('name', 'string'),
                 col('a', 'long'),
@@ -415,7 +415,7 @@ test('iceberg transform legality is skipped when the source type is unparseable'
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             columns: [
                 col('weird', 'not_a_type'),
                 col('a', 'long'),
@@ -435,7 +435,7 @@ test('Iceberg allows multiple transforms on the same source column', () => {
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             columns: [
                 col('ts', 'timestamp'),
                 col('a', 'long'),
@@ -456,7 +456,7 @@ test('Iceberg flags a genuinely duplicated partition (same source and transform)
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             columns: [
                 col('ts', 'timestamp'),
                 col('a', 'long'),
@@ -477,7 +477,7 @@ test('Iceberg treats case variants of a transform as the same partition', () => 
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             columns: [
                 col('ts', 'timestamp'),
                 col('a', 'long'),
@@ -498,7 +498,7 @@ test('Iceberg dedups parameterized transforms regardless of whitespace', () => {
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             columns: [
                 col('a', 'long'),
                 col('b', 'long'),
@@ -519,7 +519,7 @@ test('a valid iceberg partition produces no partition violations', () => {
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             columns: [
                 col('ts', 'timestamp'),
                 col('a', 'long'),
@@ -537,11 +537,45 @@ test('a valid iceberg partition produces no partition violations', () => {
 
 /// Iceberg format version
 
+test('ICEBERG_FORMAT_VERSION_VALID fires on format version 1 (pinned to 2)', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 1,
+            columns: [
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_FORMAT_VERSION_VALID');
+});
+
+test('ICEBERG_FORMAT_VERSION_VALID fires on format version 3 (pinned to 2)', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 3,
+            columns: [
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_FORMAT_VERSION_VALID');
+});
+
 test('ICEBERG_FORMAT_VERSION_VALID fires on an out-of-range format version', () => {
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             formatVersion: 4,
             columns: [
                 col('a', 'long'),
@@ -554,11 +588,11 @@ test('ICEBERG_FORMAT_VERSION_VALID fires on an out-of-range format version', () 
     expect(codes(runSemanticRules(world))).toContain('ICEBERG_FORMAT_VERSION_VALID');
 });
 
-test('ICEBERG_FORMAT_VERSION_VALID passes on a supported format version', () => {
+test('ICEBERG_FORMAT_VERSION_VALID passes on the pinned format version', () => {
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             formatVersion: 2,
             columns: [
                 col('a', 'long'),
@@ -575,7 +609,7 @@ test('ICEBERG_FORMAT_VERSION_VALID stays silent when the format version is unspe
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             columns: [
                 col('a', 'long'),
             ],
@@ -1192,7 +1226,7 @@ test('skew and storage are ignored for non-Hive engines', () => {
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             columns: [
                 col('a', 'long'),
             ],
@@ -1456,7 +1490,7 @@ test('bucketing is ignored for non-Hive engines', () => {
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             columns: [
                 col('a', 'long'),
             ],
@@ -2484,7 +2518,7 @@ function icebergWithSort(sortOrder: Array<{ column: string; direction: string; n
     return makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             sortOrder,
             columns: [
                 col('a', 'long'),
@@ -2576,7 +2610,7 @@ test('sort transform legality is skipped when the source type is unparseable', (
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             sortOrder: [
                 {
                     column: 'weird',
@@ -2679,7 +2713,7 @@ test('valid Iceberg identifier fields produce no violations', () => {
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             formatVersion: 2,
             identifierFields: [
                 'id',
@@ -2695,12 +2729,11 @@ test('valid Iceberg identifier fields produce no violations', () => {
     expect(runSemanticRules(world)).toHaveLength(0);
 });
 
-test('ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2 fires on a format-version-1 table', () => {
+test('identifier fields stay valid without a format version (engine is inherently v2)', () => {
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
-            formatVersion: 1,
+            tableType: 'iceberg_parquet_v2',
             identifierFields: [
                 'id',
             ],
@@ -2712,33 +2745,14 @@ test('ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2 fires on a format-version-1 table', () 
             ],
         }),
     ]);
-    expect(codes(runSemanticRules(world))).toContain('ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2');
-});
-
-test('ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2 stays silent when the format version is unspecified', () => {
-    const world = makeWorld([
-        makeTable({
-            name: 't',
-            tableType: 'iceberg_parquet',
-            identifierFields: [
-                'id',
-            ],
-            columns: [
-                col('id', 'long', false),
-            ],
-            primaryKey: [
-                'id',
-            ],
-        }),
-    ]);
-    expect(codes(runSemanticRules(world))).not.toContain('ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2');
+    expect(runSemanticRules(world)).toHaveLength(0);
 });
 
 test('ICEBERG_IDENTIFIER_COLUMN_EXISTS fires when an identifier field is missing', () => {
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             formatVersion: 2,
             identifierFields: [
                 'ghost',
@@ -2758,7 +2772,7 @@ test('ICEBERG_IDENTIFIER_REQUIRED fires when an identifier field is nullable', (
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             formatVersion: 2,
             identifierFields: [
                 'nick',
@@ -2779,7 +2793,7 @@ test('ICEBERG_IDENTIFIER_TYPE_PRIMITIVE fires when an identifier field is a floa
     const world = makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             formatVersion: 2,
             identifierFields: [
                 'ratio',
@@ -2814,7 +2828,6 @@ test('identifier fields are ignored for non-Iceberg engines', () => {
     ]);
     const result = codes(runSemanticRules(world));
     expect(result).not.toContain('ICEBERG_IDENTIFIER_COLUMN_EXISTS');
-    expect(result).not.toContain('ICEBERG_IDENTIFIER_NEEDS_FORMAT_V2');
 });
 
 /// Iceberg table properties
@@ -2823,7 +2836,7 @@ function icebergWithProps(tableProperties: Record<string, string>) {
     return makeWorld([
         makeTable({
             name: 't',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             tableProperties,
             columns: [
                 col('a', 'long'),
@@ -3275,7 +3288,7 @@ test('a self-referential foreign key needs no self-dependency and forms no cycle
     const world = makeWorld([
         makeTable({
             name: 'employees',
-            tableType: 'iceberg_parquet',
+            tableType: 'iceberg_parquet_v2',
             isRawData: true,
             columns: [
                 col('id', 'long'),
