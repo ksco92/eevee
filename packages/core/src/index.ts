@@ -10,6 +10,9 @@ export {
 } from './world';
 export {
     validateRoot,
+    loadValidatedRoot,
+    formatViolation,
+    LoadValidatedOptions,
 } from './validate';
 export {
     loadRoot,
