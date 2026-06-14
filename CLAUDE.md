@@ -19,7 +19,7 @@ publishable packages — `packages/core/package.json` (npm) and
 
 The publish workflow only publishes when the version on `main` is newer than the
 registry. A PR that forgets to bump is a no-op on merge, but the policy is
-"always bump" — reviewers reject PRs missing a version change.
+"always bump".
 
 ## No AI authorship signals
 
@@ -43,25 +43,10 @@ artifacts that survive merge is not.
 If a contribution was written with AI assistance, the human contributor is the
 sole credited author.
 
-## Workflow
-
-The dev loop for every change:
-
-1. Add the feature (code + tests + doc sync — see "Documentation sync" below).
-2. Open a PR.
-3. Run **both** reviewers on it:
-   - **pr-reviewer** (the agent) — adversarial check of correctness, acceptance
-     criteria, and test coverage on the diff.
-   - **oss-reviewer** (the skill in `~/.claude/skills/oss-reviewer`) —
-     OSS-readiness: fresh-clone bootstrap, the banned-word list above, AI-code
-     tells, license detectability, README quick-start accuracy, and that nothing
-     secret or machine-specific is committed.
-4. Merge **only if both reviewers pass**. A FAIL from either blocks the merge —
-   fix the findings and re-run before merging.
+## Branch protection
 
 `main` is branch-protected: direct pushes are blocked (`enforce_admins` on), so
-changes land only through merged PRs. The two reviews and green CI are still
-enforced at review time, not yet wired as GitHub-required status checks.
+changes land only through merged PRs.
 
 ## Documentation sync
 
@@ -72,12 +57,12 @@ they are current; a PR that changes behavior without syncing the docs is
 incomplete. Ask, in order:
 
 - Does it change a command, path, script, or the quick-start? → update `README.md`.
-- Does it change a convention, policy, the review workflow, or the coverage rule?
+- Does it change a convention, policy, or the coverage rule?
   → update `CLAUDE.md`.
 - Does it add, rename, or remove a `tableType`, rule code, field, or violation?
   → update `spec/README.md` and the JSON Schema, and add fixtures.
 
-Reviewers reject PRs whose behavior and docs have drifted apart.
+A PR whose behavior and docs have drifted apart is incomplete.
 
 ## Testing and coverage
 
@@ -96,7 +81,7 @@ Reviewers reject PRs whose behavior and docs have drifted apart.
   and keep that root valid (`ok: true`, no new errors). Unit tests prove the rule
   fires and passes in isolation; the `samples/` entry proves the feature is usable
   in a realistic dataset and keeps the showcase complete. A feature with tests but
-  no `samples/` coverage is incomplete, and reviewers reject it.
+  no `samples/` coverage is incomplete.
 
 ## Self-validation
 
@@ -113,8 +98,8 @@ trailing commas, one item per line in multiline arrays/objects, no unused vars
 
 The standard and the validator evolve together; see the "Spec evolution"
 section of `README.md`. Automated proposals (new rules, type-registry entries,
-example or schema updates) are welcome but land only through the normal PR +
-review gates, never directly on `main`.
+example or schema updates) are welcome but land only through pull requests,
+never directly on `main`.
 
 ## Adding a table type (engine)
 

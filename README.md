@@ -91,7 +91,7 @@ Because of that coupling, every change carries a documentation check. **Before
 opening a PR, re-read [`CLAUDE.md`](CLAUDE.md) and this README and update them if
 the change touches anything they describe**: a command, a convention, a rule
 code, a field, a `tableType`, or the quick-start. A change whose behavior and
-docs have drifted apart is incomplete, and reviewers reject it. The full policy
+docs have drifted apart is incomplete. The full policy
 is in `CLAUDE.md`.
 
 ## License
