@@ -10,7 +10,8 @@
 import * as fs from 'fs';
 
 import {
-    validateRoot, 
+    formatViolation,
+    validateRoot,
 } from './validate';
 import {
     loadRoot, 
@@ -25,7 +26,7 @@ import {
     renderDot, 
 } from './diagram/render';
 import {
-    ValidationResult, Violation,
+    ValidationResult,
 } from './model';
 
 const USAGE = `flexdataset — Flexible Dataset Definition validator
@@ -40,22 +41,12 @@ Options:
   --format   Output format for "validate" (default: human).
   --out      Write SVG to a file instead of stdout (graph / er).`;
 
-function formatViolation(violation: Violation): string {
-    const location = [
-        violation.schema,
-        violation.table,
-    ].filter(Boolean).join('.');
-    const where = location ? ` ${location}` : '';
-    const field = violation.field ? ` (${violation.field})` : '';
-    return `  ${violation.level.toUpperCase()} [${violation.code}]${where}${field}: ${violation.message}`;
-}
-
 function printHuman(result: ValidationResult): void {
     const errors = result.violations.filter((violation) => violation.level === 'error');
     const warnings = result.violations.filter((violation) => violation.level === 'warning');
 
     for (const violation of result.violations) {
-        const line = formatViolation(violation);
+        const line = `  ${formatViolation(violation)}`;
         if (violation.level === 'error') {
             console.error(line);
         } else {
