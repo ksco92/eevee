@@ -36,12 +36,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: packages/core/package-lock.json
           registry-url: https://registry.npmjs.org
       # Trusted publishing (OIDC) requires npm >= 11.5.1; setup-node@v4 ships
-      # npm 10.x with Node 22, so upgrade the CLI before any registry call.
+      # npm 10.x with Node 24, so upgrade the CLI before any registry call.
       - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run lint
