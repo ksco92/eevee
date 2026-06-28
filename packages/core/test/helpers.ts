@@ -28,12 +28,13 @@ import {
 } from '../src/world';
 
 /** Convenience column factory. */
-export function col(name: string, type: string, nullable?: boolean): Column {
+export function col(name: string, type: string, nullable?: boolean, id?: number): Column {
     return {
         name,
         type,
         description: `column ${name}`,
         nullable,
+        id,
     };
 }
 

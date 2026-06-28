@@ -235,7 +235,72 @@ export class IcebergParquetV2Table extends TableTypeBase {
             ...this.tablePropertyViolations(),
             ...this.sortOrderViolations(),
             ...this.identifierFieldViolations(),
+            ...this.fieldIdViolations(),
         ];
+    }
+
+    /**
+     * Validate Iceberg column field ids — the ids Iceberg uses for schema
+     * evolution. Pinning them keeps old data files readable across renames and
+     * drops, so they are all-or-nothing per table: either every column declares
+     * an `id` or none do. When present, each id must be a positive integer and
+     * unique within the table.
+     *
+     * Emits `ICEBERG_FIELD_ID_ALL_OR_NONE`, `ICEBERG_FIELD_ID_POSITIVE`, and
+     * `ICEBERG_FIELD_ID_UNIQUE`.
+     *
+     * @returns Every field-id violation.
+     */
+    private fieldIdViolations(): Violation[] {
+        const violations: Violation[] = [];
+        const {
+            columns,
+        } = this.definition;
+
+        const withId = columns.filter((column) => column.id !== undefined);
+        if (withId.length === 0) {
+            return [];
+        }
+
+        if (withId.length !== columns.length) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'ICEBERG_FIELD_ID_ALL_OR_NONE',
+                field: 'columns',
+                message: `either every column declares an id or none do; ${withId.length} `
+                    + `of ${columns.length} columns have an id`,
+            }));
+        }
+
+        const seen = new Set<number>();
+        columns.forEach((column, index) => {
+            const {
+                id,
+            } = column;
+            if (id === undefined) {
+                return;
+            }
+            if (!Number.isInteger(id) || id < 1) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_FIELD_ID_POSITIVE',
+                    field: `columns[${index}].id`,
+                    message: `column "${column.name}" id ${id} must be a positive integer`,
+                }));
+                return;
+            }
+            if (seen.has(id)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_FIELD_ID_UNIQUE',
+                    field: `columns[${index}].id`,
+                    message: `column "${column.name}" reuses field id ${id}; ids must be unique within the table`,
+                }));
+            }
+            seen.add(id);
+        });
+
+        return violations;
     }
 
     /**

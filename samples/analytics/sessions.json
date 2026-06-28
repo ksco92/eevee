@@ -8,37 +8,44 @@
         {
             "name": "session_id",
             "type": "long",
-            "description": "Surrogate session key."
+            "description": "Surrogate session key.",
+            "id": 1
         },
         {
             "name": "session_token",
             "type": "string",
-            "description": "Opaque session token (unique, but not the primary key)."
+            "description": "Opaque session token (unique, but not the primary key).",
+            "id": 2
         },
         {
             "name": "src_event_id",
             "type": "long",
-            "description": "Originating raw app event."
+            "description": "Originating raw app event.",
+            "id": 3
         },
         {
             "name": "user_id",
             "type": "long",
-            "description": "User the session belongs to."
+            "description": "User the session belongs to.",
+            "id": 4
         },
         {
             "name": "started_at",
             "type": "timestamp",
-            "description": "Session start."
+            "description": "Session start.",
+            "id": 5
         },
         {
             "name": "ended_at",
             "type": "timestamptz",
-            "description": "Session end (UTC)."
+            "description": "Session end (UTC).",
+            "id": 6
         },
         {
             "name": "bytes_sent",
             "type": "long",
-            "description": "Bytes transferred."
+            "description": "Bytes transferred.",
+            "id": 7
         }
     ],
     "primaryKey": [
