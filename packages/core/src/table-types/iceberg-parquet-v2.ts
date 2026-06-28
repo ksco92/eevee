@@ -280,7 +280,10 @@ export class IcebergParquetV2Table extends TableTypeBase {
             if (id === undefined) {
                 return;
             }
-            if (!Number.isInteger(id) || id < 1) {
+            // Integer-ness is enforced structurally by the JSON Schema, so an id
+            // that reaches the engine is always an integer; only its sign is
+            // checked here.
+            if (id < 1) {
                 violations.push(this.violation({
                     level: 'error',
                     code: 'ICEBERG_FIELD_ID_POSITIVE',

@@ -155,7 +155,8 @@ one), field ids are all-or-nothing per table. Checks:
   that pins some but not all column ids is rejected.
 - **`ICEBERG_FIELD_ID_POSITIVE`** (error) — a declared `id` must be a positive integer.
 - **`ICEBERG_FIELD_ID_UNIQUE`** (error) — declared ids must be unique within the table; two columns may
-  not share a field id.
+  not share a field id. An id that already failed `ICEBERG_FIELD_ID_POSITIVE` is excluded from the
+  uniqueness check, so an invalid id is reported once rather than also as a duplicate.
 
 The field is engine-specific; non-Iceberg engines ignore it.
 

@@ -2925,6 +2925,26 @@ test('ICEBERG_FIELD_ID_UNIQUE fires when two columns share a field id', () => {
     expect(codes(runSemanticRules(world))).toContain('ICEBERG_FIELD_ID_UNIQUE');
 });
 
+test('a non-positive field id is reported once and excluded from the uniqueness check', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('id', 'long', false, 0),
+                col('name', 'string', undefined, 0),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result.filter((code) => code === 'ICEBERG_FIELD_ID_POSITIVE')).toHaveLength(2);
+    expect(result).not.toContain('ICEBERG_FIELD_ID_UNIQUE');
+});
+
 test('field ids are ignored for non-Iceberg engines', () => {
     const world = makeWorld([
         makeTable({
