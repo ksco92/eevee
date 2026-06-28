@@ -89,6 +89,7 @@ function normalizeColumns(value: unknown): Column[] {
             name: asString(record.name),
             type: asString(record.type),
             description: asString(record.description),
+            id: asOptionalNumber(record.id),
             nullable: asOptionalBoolean(record.nullable),
             generated: asOptionalString(record.generated),
             expression: asOptionalString(record.expression),

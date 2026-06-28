@@ -77,7 +77,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `tableType` | yes | `hive_parquet` \| `iceberg_parquet_v2` \| `postgres_18`. |
 | `isRawData` | yes | `true` marks the top of the pipeline. |
 | `formatVersion` | no | Iceberg only: the table format version. On `iceberg_parquet_v2` it must be `2` when present. Other engines ignore it. |
-| `columns` | yes | Non-empty; each has `name`, `type`, `description`, an optional `nullable`, and optional Postgres column attributes (`generated`/`expression`/`expressionColumns`, `identity`, `default`, `collation`, `compression`, `storage`). `type` validated per engine. |
+| `columns` | yes | Non-empty; each has `name`, `type`, `description`, an optional `nullable`, an optional Iceberg `id` (field id), and optional Postgres column attributes (`generated`/`expression`/`expressionColumns`, `identity`, `default`, `collation`, `compression`, `storage`). `type` validated per engine. |
 | `primaryKey` | yes | Non-empty list of column names; each must exist in `columns`. |
 | `partitions` | no | Engine-specific semantics (see below). |
 | `sortOrder` | no | Iceberg only: ordered sort fields (`column`, optional `transform`, `direction`, `nullOrder`). Other engines ignore it. |
@@ -139,6 +139,24 @@ identifier fields are always allowed on it. Checks:
   identifier fields must be required.
 - **`ICEBERG_IDENTIFIER_TYPE_PRIMITIVE`** (error) — an identifier field must be a primitive type other
   than `float` or `double`.
+
+The field is engine-specific; non-Iceberg engines ignore it.
+
+### Field ids (Iceberg)
+
+Each column may carry an optional `id`: the Iceberg field id used for schema evolution. Iceberg matches
+data files to schema columns by id, not name, so pinning ids is what lets a column be renamed (same id,
+new name) or dropped (id retired forever) without rewriting existing data. The validator does not assign
+ids — it only checks the ones you declare, leaving assignment to the deploying engine when you omit them.
+Because a partially pinned schema is the dangerous case (an auto-assigned id can collide with a pinned
+one), field ids are all-or-nothing per table. Checks:
+
+- **`ICEBERG_FIELD_ID_ALL_OR_NONE`** (error) — either every column declares an `id` or none do; a table
+  that pins some but not all column ids is rejected.
+- **`ICEBERG_FIELD_ID_POSITIVE`** (error) — a declared `id` must be a positive integer.
+- **`ICEBERG_FIELD_ID_UNIQUE`** (error) — declared ids must be unique within the table; two columns may
+  not share a field id. An id that already failed `ICEBERG_FIELD_ID_POSITIVE` is excluded from the
+  uniqueness check, so an invalid id is reported once rather than also as a duplicate.
 
 The field is engine-specific; non-Iceberg engines ignore it.
 

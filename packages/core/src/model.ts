@@ -34,6 +34,15 @@ export interface Column {
     readonly description: string;
 
     /**
+     * Iceberg field id used for schema evolution (Iceberg). Optional: when set,
+     * it pins the column to a stable id so renames keep the same id and dropped
+     * ids are retired forever, keeping old data files readable. Field ids are
+     * all-or-nothing per table; when present each must be a positive integer and
+     * unique within the table. Other engines ignore it.
+     */
+    readonly id?: number;
+
+    /**
      * Whether the column may hold null. Optional: when omitted, nullability is
      * unspecified and the nullability cross-checks do not fire. `false` marks a
      * NOT NULL column (Iceberg `required`); `true` marks an explicitly nullable

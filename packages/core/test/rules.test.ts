@@ -2830,6 +2830,139 @@ test('identifier fields are ignored for non-Iceberg engines', () => {
     expect(result).not.toContain('ICEBERG_IDENTIFIER_COLUMN_EXISTS');
 });
 
+/// Iceberg field ids
+
+test('fully pinned Iceberg field ids produce no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('id', 'long', false, 1),
+                col('name', 'string', undefined, 2),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('columns without any field ids produce no field-id violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('id', 'long', false),
+                col('name', 'string'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('ICEBERG_FIELD_ID_ALL_OR_NONE');
+    expect(result).not.toContain('ICEBERG_FIELD_ID_POSITIVE');
+    expect(result).not.toContain('ICEBERG_FIELD_ID_UNIQUE');
+});
+
+test('ICEBERG_FIELD_ID_ALL_OR_NONE fires when only some columns are pinned', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('id', 'long', false, 1),
+                col('name', 'string'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_FIELD_ID_ALL_OR_NONE');
+});
+
+test('ICEBERG_FIELD_ID_POSITIVE fires on a non-positive field id', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('id', 'long', false, 0),
+                col('name', 'string', undefined, 2),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_FIELD_ID_POSITIVE');
+});
+
+test('ICEBERG_FIELD_ID_UNIQUE fires when two columns share a field id', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('id', 'long', false, 1),
+                col('name', 'string', undefined, 1),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_FIELD_ID_UNIQUE');
+});
+
+test('a non-positive field id is reported once and excluded from the uniqueness check', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('id', 'long', false, 0),
+                col('name', 'string', undefined, 0),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result.filter((code) => code === 'ICEBERG_FIELD_ID_POSITIVE')).toHaveLength(2);
+    expect(result).not.toContain('ICEBERG_FIELD_ID_UNIQUE');
+});
+
+test('field ids are ignored for non-Iceberg engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('id', 'integer', false, 1),
+                col('name', 'text'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('ICEBERG_FIELD_ID_ALL_OR_NONE');
+});
+
 /// Iceberg table properties
 
 function icebergWithProps(tableProperties: Record<string, string>) {
