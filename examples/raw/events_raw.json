@@ -24,6 +24,11 @@
             "name": "payload",
             "type": "string",
             "description": "Raw JSON payload."
+        },
+        {
+            "name": "geo",
+            "type": "struct<lat:double,lon:double>",
+            "description": "Fixed-shape geo coordinates (nested struct type)."
         }
     ],
     "primaryKey": [

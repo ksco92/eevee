@@ -160,6 +160,41 @@ one), field ids are all-or-nothing per table. Checks:
 
 The field is engine-specific; non-Iceberg engines ignore it.
 
+### Column types (Iceberg)
+
+Iceberg column types are the primitives (`boolean`, `int`, `long`, `float`, `double`, `date`, `time`,
+`timestamp`, `timestamptz`, `string`, `uuid`, `binary`), the parameterized `decimal(p,s)`
+(`1 ≤ p ≤ 38`, `s ≤ p`) and `fixed[L]` (`L ≥ 1`), and the nested v2 forms, which nest recursively:
+
+- `struct<name:type,name:type,...>` — one or more named fields, in order. Field names must be simple
+  identifiers (`[A-Za-z_][A-Za-z0-9_]*`) and unique within the struct.
+- `list<type>` — a list of one element type.
+- `map<keytype,valuetype>` — a map from a key type to a value type.
+
+Nesting composes to any depth, and inner types may themselves be parameterized, e.g.
+`struct<a:struct<b:int>,c:list<map<string,decimal(20,10)>>>`. Type keywords match case-insensitively;
+struct field names keep their original case. Checks:
+
+- **`ICEBERG_NESTED_TYPE_MALFORMED`** (error) — a nested type string is malformed: unbalanced brackets,
+  an empty `struct<>`, a struct field not written as `name:type`, an invalid field-name identifier, the
+  wrong arity for `list`/`map`, or an invalid inner type. The message states which.
+- **`ICEBERG_STRUCT_DUPLICATE_FIELD`** (error) — two fields in the same struct share a name.
+- **`COLUMN_TYPE_VALID`** (error) — a plain scalar type that is not recognized (and is not an attempted
+  nested form) stays the generic column-type error.
+
+**Where nested types may appear.** A nested-typed column is a valid data column, but it cannot take part
+in features that require a scalar source:
+
+- **`identifierFields`** — rejected (**`ICEBERG_IDENTIFIER_TYPE_PRIMITIVE`**). Iceberg requires
+  identifier fields to be primitive; a `struct`/`list`/`map` column may not be one.
+- **`partitions`** — rejected (**`ICEBERG_TRANSFORM_SOURCE_TYPE_LEGAL`**). Partition transforms apply
+  only to primitive source columns.
+- **`sortOrder`** — rejected (**`ICEBERG_SORT_TRANSFORM_TYPE_LEGAL`**). Sort sources must be primitive,
+  with or without a transform.
+- **`primaryKey`** — allowed structurally. FDD's `primaryKey` is a *logical* key (Iceberg has no
+  primary-key concept of its own; `identifierFields` is the equality-delete key it enforces). Using a
+  nested column as a logical key is discouraged but not rejected here.
+
 ### Indexes (Postgres)
 
 A `postgres_18` table may declare `indexes`: secondary indexes, each with a `name`, an access
@@ -348,9 +383,6 @@ Cross-schema references (in `dependsOn` and foreign keys) are allowed.
 
 ## Known limitations (v0)
 
-- **Nested Iceberg types** (`list`, `map`, `struct`) are not yet accepted as column types; primitives
-  plus `decimal(p,s)` and `fixed[L]` are. Hive nested types (`array`, `map`, `struct`, `uniontype`)
-  are supported.
 - A schema folder is **flat**: nested subdirectories under a schema are ignored.
 - If a `<schema>.json` file contains a table definition (a table sharing the schema's name), it is read
   as the schema description and fails structural validation rather than producing a name-collision
@@ -369,8 +401,7 @@ the decision is explicit rather than an oversight; each could become a later add
   `tablespace` are physical/operational settings, not data-model shape. Tablespace in particular has no
   closed legal domain (environment-specific names), so it falls under the free-form passthrough rule.
 - **Iceberg v3 column defaults** (`initial-default` / `write-default`) — gated on format version 3 and
-  requiring per-type value compatibility that is hard to validate well statically; revisit alongside
-  nested types.
+  requiring per-type value compatibility that is hard to validate well statically.
 - **Iceberg partition evolution / multiple partition specs** — table-history concern, not the static
   current-shape FDD describes; the single-spec `partitions` model is the right altitude for v0.
 - **Hive partition-column ordering** — already covered: `partitions` is an ordered list and its order

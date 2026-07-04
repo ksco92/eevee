@@ -3,10 +3,12 @@
  */
 
 import {
+    analyzeIcebergType,
     IcebergTransform,
     IcebergTransformKind,
     IcebergType,
     IcebergTypeKind,
+    isNestedIcebergType,
     isValidIcebergType,
     parseIcebergTransform,
     parseIcebergType,
@@ -53,9 +55,182 @@ test('fixed parses with a positive length and rejects zero', () => {
     expect(parseIcebergType('fixed[0]')).toBeNull();
 });
 
-test('unknown iceberg types are rejected', () => {
-    expect(parseIcebergType('struct<a:int>')).toBeNull();
+test('unknown scalar iceberg types are rejected as UNKNOWN', () => {
+    expect(parseIcebergType('whatever')).toBeNull();
     expect(isValidIcebergType('whatever')).toBe(false);
+    const result = analyzeIcebergType('whatever');
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+        expect(result.code).toBe('UNKNOWN');
+    }
+});
+
+/// Nested iceberg types
+
+test('struct parses into ordered fields', () => {
+    expect(parseIcebergType('struct<polarity:double,neg:double,neu:double,pos:double>')).toEqual({
+        kind: IcebergTypeKind.STRUCT,
+        structFields: [
+            {
+                name: 'polarity',
+                type: {
+                    kind: IcebergTypeKind.DOUBLE,
+                },
+            },
+            {
+                name: 'neg',
+                type: {
+                    kind: IcebergTypeKind.DOUBLE,
+                },
+            },
+            {
+                name: 'neu',
+                type: {
+                    kind: IcebergTypeKind.DOUBLE,
+                },
+            },
+            {
+                name: 'pos',
+                type: {
+                    kind: IcebergTypeKind.DOUBLE,
+                },
+            },
+        ],
+    });
+});
+
+test('list parses into an element type', () => {
+    expect(parseIcebergType('list<string>')).toEqual({
+        kind: IcebergTypeKind.LIST,
+        elementType: {
+            kind: IcebergTypeKind.STRING,
+        },
+    });
+});
+
+test('map parses into key and value types', () => {
+    expect(parseIcebergType('map<string,long>')).toEqual({
+        kind: IcebergTypeKind.MAP,
+        keyType: {
+            kind: IcebergTypeKind.STRING,
+        },
+        valueType: {
+            kind: IcebergTypeKind.LONG,
+        },
+    });
+});
+
+test('nested types recurse and preserve inner parameterized types', () => {
+    expect(parseIcebergType('struct<a:struct<b:int>,c:list<map<string,decimal(20,10)>>>')).toEqual({
+        kind: IcebergTypeKind.STRUCT,
+        structFields: [
+            {
+                name: 'a',
+                type: {
+                    kind: IcebergTypeKind.STRUCT,
+                    structFields: [
+                        {
+                            name: 'b',
+                            type: {
+                                kind: IcebergTypeKind.INT,
+                            },
+                        },
+                    ],
+                },
+            },
+            {
+                name: 'c',
+                type: {
+                    kind: IcebergTypeKind.LIST,
+                    elementType: {
+                        kind: IcebergTypeKind.MAP,
+                        keyType: {
+                            kind: IcebergTypeKind.STRING,
+                        },
+                        valueType: {
+                            kind: IcebergTypeKind.DECIMAL,
+                            decimalPrecision: 20,
+                            decimalScale: 10,
+                        },
+                    },
+                },
+            },
+        ],
+    });
+});
+
+test('nested constructors are case-insensitive and tolerate whitespace', () => {
+    expect(isValidIcebergType('STRUCT< a : INT , b : STRING >')).toBe(true);
+    expect(parseIcebergType('LIST<Long>')).toEqual({
+        kind: IcebergTypeKind.LIST,
+        elementType: {
+            kind: IcebergTypeKind.LONG,
+        },
+    });
+});
+
+test('isNestedIcebergType distinguishes nested from scalar types', () => {
+    expect(isNestedIcebergType({
+        kind: IcebergTypeKind.STRUCT,
+    })).toBe(true);
+    expect(isNestedIcebergType({
+        kind: IcebergTypeKind.LIST,
+    })).toBe(true);
+    expect(isNestedIcebergType({
+        kind: IcebergTypeKind.MAP,
+    })).toBe(true);
+    expect(isNestedIcebergType({
+        kind: IcebergTypeKind.LONG,
+    })).toBe(false);
+});
+
+test('malformed nested types are rejected as MALFORMED', () => {
+    const cases = [
+        'struct<a:int',
+        'struct<>',
+        'struct<a>',
+        'struct<:int>',
+        'struct<a b:int>',
+        'list<>',
+        'list<int,long>',
+        'map<string>',
+        'map<string,int,long>',
+        'list<not_a_type>',
+        'struct<a:not_a_type>',
+        'map<not_a_type,int>',
+        'map<string,not_a_type>',
+        'struct<a:int]>',
+        'map<string)>',
+    ];
+    for (const typeStr of cases) {
+        const result = analyzeIcebergType(typeStr);
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.code).toBe('MALFORMED');
+        }
+    }
+});
+
+test('duplicate struct field names are rejected as DUPLICATE_FIELD', () => {
+    const result = analyzeIcebergType('struct<a:int,a:long>');
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+        expect(result.code).toBe('DUPLICATE_FIELD');
+    }
+    expect(parseIcebergType('struct<a:int,a:long>')).toBeNull();
+});
+
+test('a duplicate field nested inside another struct keeps its precise code', () => {
+    const result = analyzeIcebergType('struct<outer:struct<a:int,a:long>>');
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+        expect(result.code).toBe('DUPLICATE_FIELD');
+    }
+});
+
+test('nested source types are never legal transform targets', () => {
+    expect(transformLegalOnType(transform(IcebergTransformKind.IDENTITY), typeOf(IcebergTypeKind.STRUCT))).toBe(false);
+    expect(transformLegalOnType(transform(IcebergTransformKind.VOID), typeOf(IcebergTypeKind.LIST))).toBe(false);
 });
 
 test('iceberg type and transform parsing is case-insensitive', () => {
