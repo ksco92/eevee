@@ -99,6 +99,102 @@ test('COLUMN_TYPE_VALID fires on an unknown type', () => {
     expect(codes(runSemanticRules(world))).toContain('COLUMN_TYPE_VALID');
 });
 
+/// Iceberg nested column types
+
+test('the Iceberg engine accepts scalar and nested types via isValidColumnType', () => {
+    const table = makeTable({
+        name: 't',
+        tableType: 'iceberg_parquet_v2',
+        columns: [
+            col('id', 'long'),
+        ],
+        primaryKey: [
+            'id',
+        ],
+    });
+    expect(table.isValidColumnType('long')).toBe(true);
+    expect(table.isValidColumnType('struct<a:int>')).toBe(true);
+    expect(table.isValidColumnType('struct<a:int')).toBe(false);
+});
+
+test('a valid Iceberg nested type produces no column-type violation', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            columns: [
+                col('id', 'long', false),
+                col('sentiment', 'struct<polarity:double,neg:double,neu:double,pos:double>'),
+                col('tags', 'list<string>'),
+                col('attrs', 'map<string,long>'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('COLUMN_TYPE_VALID');
+    expect(result).not.toContain('ICEBERG_NESTED_TYPE_MALFORMED');
+});
+
+test('ICEBERG_NESTED_TYPE_MALFORMED fires on a malformed nested type', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            columns: [
+                col('id', 'long', false),
+                col('broken', 'struct<a:int'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).toContain('ICEBERG_NESTED_TYPE_MALFORMED');
+    expect(result).not.toContain('COLUMN_TYPE_VALID');
+});
+
+test('ICEBERG_STRUCT_DUPLICATE_FIELD fires on a struct with duplicate field names', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            columns: [
+                col('id', 'long', false),
+                col('dupe', 'struct<a:int,a:long>'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).toContain('ICEBERG_STRUCT_DUPLICATE_FIELD');
+    expect(result).not.toContain('ICEBERG_NESTED_TYPE_MALFORMED');
+});
+
+test('a plain unknown Iceberg scalar type stays the generic COLUMN_TYPE_VALID', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            columns: [
+                col('id', 'long', false),
+                col('weird', 'not_a_type'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).toContain('COLUMN_TYPE_VALID');
+    expect(result).not.toContain('ICEBERG_NESTED_TYPE_MALFORMED');
+});
+
 /// Partitions — postgres
 
 test('a valid Postgres partition produces no partition violations', () => {
@@ -429,6 +525,26 @@ test('iceberg transform legality is skipped when the source type is unparseable'
         }),
     ]);
     expect(codes(runSemanticRules(world))).not.toContain('ICEBERG_TRANSFORM_SOURCE_TYPE_LEGAL');
+});
+
+test('ICEBERG_TRANSFORM_SOURCE_TYPE_LEGAL fires when the partition source is a nested type', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            columns: [
+                col('tags', 'list<string>'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('tags', 'identity'),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_TRANSFORM_SOURCE_TYPE_LEGAL');
 });
 
 test('Iceberg allows multiple transforms on the same source column', () => {
@@ -2631,6 +2747,30 @@ test('sort transform legality is skipped when the source type is unparseable', (
     expect(codes(runSemanticRules(world))).not.toContain('ICEBERG_SORT_TRANSFORM_TYPE_LEGAL');
 });
 
+test('ICEBERG_SORT_TRANSFORM_TYPE_LEGAL fires when the sort source is a nested type', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            sortOrder: [
+                {
+                    column: 'tags',
+                    direction: 'asc',
+                    nullOrder: 'nulls-first',
+                },
+            ],
+            columns: [
+                col('tags', 'list<string>'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_SORT_TRANSFORM_TYPE_LEGAL');
+});
+
 test('NO_DUPLICATE_SORT_FIELDS fires on a repeated sort column', () => {
     const result = codes(runSemanticRules(icebergWithSort([
         {
@@ -2801,6 +2941,27 @@ test('ICEBERG_IDENTIFIER_TYPE_PRIMITIVE fires when an identifier field is a floa
             columns: [
                 col('id', 'long', false),
                 col('ratio', 'float'),
+            ],
+            primaryKey: [
+                'id',
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_IDENTIFIER_TYPE_PRIMITIVE');
+});
+
+test('ICEBERG_IDENTIFIER_TYPE_PRIMITIVE fires when an identifier field is a nested type', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            identifierFields: [
+                'payload',
+            ],
+            columns: [
+                col('id', 'long', false),
+                col('payload', 'struct<a:int>', false),
             ],
             primaryKey: [
                 'id',

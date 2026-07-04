@@ -45,11 +45,16 @@ export {
     isValidPostgresType,
 } from './types';
 export {
+    analyzeIcebergType,
     parseIcebergType,
     isValidIcebergType,
+    isNestedIcebergType,
     parseIcebergTransform,
     transformLegalOnType,
     IcebergType,
+    IcebergStructField,
+    IcebergTypeParse,
+    IcebergTypeErrorCode,
     IcebergTypeKind,
     IcebergTransform,
     IcebergTransformKind,

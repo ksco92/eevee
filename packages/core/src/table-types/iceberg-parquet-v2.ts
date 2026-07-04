@@ -19,8 +19,9 @@ import {
     TableTypeBase,
 } from '../table-type';
 import {
+    analyzeIcebergType,
     IcebergTypeKind,
-    isValidIcebergType,
+    isNestedIcebergType,
     parseIcebergTransform,
     parseIcebergType,
     transformLegalOnType,
@@ -72,13 +73,58 @@ export class IcebergParquetV2Table extends TableTypeBase {
     protected static readonly EXPECTED_FORMAT_VERSION = 2;
 
     /**
-     * Validate a column type against the Iceberg v0 type registry.
+     * Validate a column type against the Iceberg type registry.
      *
      * @param type Type string from a column definition.
      * @returns True when the type is a valid Iceberg type.
      */
     public isValidColumnType(type: string): boolean {
-        return isValidIcebergType(type);
+        return analyzeIcebergType(type).ok;
+    }
+
+    /**
+     * Diagnose a single column's type. A well-formed nested type is accepted; a
+     * malformed nested string gets a precise code rather than the generic
+     * `COLUMN_TYPE_VALID`.
+     *
+     * Emits `ICEBERG_STRUCT_DUPLICATE_FIELD` (two fields share a name in one
+     * struct), `ICEBERG_NESTED_TYPE_MALFORMED` (unbalanced brackets, empty
+     * struct, malformed field, or an invalid inner type), or the generic
+     * `COLUMN_TYPE_VALID` (a plain unrecognized scalar type).
+     *
+     * @param type Column type string.
+     * @param name Column name, for the message.
+     * @param index Column index, for the `field` path.
+     * @returns A violation, or null when the type is valid.
+     */
+    protected columnTypeViolation(type: string, name: string, index: number): Violation | null {
+        const result = analyzeIcebergType(type);
+        if (result.ok) {
+            return null;
+        }
+        const field = `columns[${index}].type`;
+        if (result.code === 'DUPLICATE_FIELD') {
+            return this.violation({
+                level: 'error',
+                code: 'ICEBERG_STRUCT_DUPLICATE_FIELD',
+                field,
+                message: result.message,
+            });
+        }
+        if (result.code === 'MALFORMED') {
+            return this.violation({
+                level: 'error',
+                code: 'ICEBERG_NESTED_TYPE_MALFORMED',
+                field,
+                message: result.message,
+            });
+        }
+        return this.violation({
+            level: 'error',
+            code: 'COLUMN_TYPE_VALID',
+            field,
+            message: `"${type}" is not a valid ${this.definition.tableType} type for column "${name}"`,
+        });
     }
 
     /**
@@ -366,6 +412,18 @@ export class IcebergParquetV2Table extends TableTypeBase {
                 return;
             }
 
+            const sourceType = parseIcebergType(sourceColumn.type);
+            if (sourceType !== null && isNestedIcebergType(sourceType)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_SORT_TRANSFORM_TYPE_LEGAL',
+                    field: `sortOrder[${index}].column`,
+                    message: `sort column "${field.column}" of type "${sourceColumn.type}" `
+                        + 'is a nested type and cannot be a sort source',
+                }));
+                return;
+            }
+
             if (field.transform === undefined) {
                 return;
             }
@@ -379,7 +437,6 @@ export class IcebergParquetV2Table extends TableTypeBase {
                 }));
                 return;
             }
-            const sourceType = parseIcebergType(sourceColumn.type);
             if (sourceType !== null && !transformLegalOnType(transform, sourceType)) {
                 violations.push(this.violation({
                     level: 'error',
@@ -566,7 +623,10 @@ export class IcebergParquetV2Table extends TableTypeBase {
                 }));
             }
             const type = parseIcebergType(column.type);
-            if (type === null || type.kind === IcebergTypeKind.FLOAT || type.kind === IcebergTypeKind.DOUBLE) {
+            if (type === null
+                || isNestedIcebergType(type)
+                || type.kind === IcebergTypeKind.FLOAT
+                || type.kind === IcebergTypeKind.DOUBLE) {
                 violations.push(this.violation({
                     level: 'error',
                     code: 'ICEBERG_IDENTIFIER_TYPE_PRIMITIVE',

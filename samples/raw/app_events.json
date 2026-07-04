@@ -86,6 +86,21 @@
             "name": "total",
             "type": "double",
             "description": "Running total."
+        },
+        {
+            "name": "sentiment",
+            "type": "struct<polarity:double,neg:double,neu:double,pos:double>",
+            "description": "Fixed-shape sentiment payload (nested struct type)."
+        },
+        {
+            "name": "tags",
+            "type": "list<string>",
+            "description": "Free-form tags (nested list type)."
+        },
+        {
+            "name": "attributes",
+            "type": "map<string,long>",
+            "description": "Arbitrary numeric attributes keyed by name (nested map type)."
         }
     ],
     "primaryKey": [

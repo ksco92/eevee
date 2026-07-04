@@ -201,17 +201,35 @@ export abstract class TableTypeBase {
     private columnTypeViolations(): Violation[] {
         const violations: Violation[] = [];
         this.definition.columns.forEach((column, index) => {
-            if (!this.isValidColumnType(column.type)) {
-                violations.push(this.violation({
-                    level: 'error',
-                    code: 'COLUMN_TYPE_VALID',
-                    field: `columns[${index}].type`,
-                    message: `"${column.type}" is not a valid ${this.definition.tableType} type `
-                        + `for column "${column.name}"`,
-                }));
+            const violation = this.columnTypeViolation(column.type, column.name, index);
+            if (violation !== null) {
+                violations.push(violation);
             }
         });
         return violations;
+    }
+
+    /**
+     * Diagnose a single column's type. The default emits a generic
+     * `COLUMN_TYPE_VALID` error when the engine rejects the type. Engines whose
+     * type grammar yields structured failures (Iceberg nested types) override
+     * this to emit a precise code instead.
+     *
+     * @param type Column type string.
+     * @param name Column name, for the message.
+     * @param index Column index, for the `field` path.
+     * @returns A violation, or null when the type is valid.
+     */
+    protected columnTypeViolation(type: string, name: string, index: number): Violation | null {
+        if (this.isValidColumnType(type)) {
+            return null;
+        }
+        return this.violation({
+            level: 'error',
+            code: 'COLUMN_TYPE_VALID',
+            field: `columns[${index}].type`,
+            message: `"${type}" is not a valid ${this.definition.tableType} type for column "${name}"`,
+        });
     }
 
     /// RAW_NO_DEPENDS_ON / NONRAW_REQUIRES_DEPENDS_ON.
