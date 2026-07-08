@@ -160,6 +160,29 @@ one), field ids are all-or-nothing per table. Checks:
 
 The field is engine-specific; non-Iceberg engines ignore it.
 
+### Partition field ids (Iceberg)
+
+Each partition may carry an optional `fieldId`: the Iceberg partition field id. Iceberg requires these
+ids to be unique across the table's **entire spec history**, so a source translator that maps an FDD
+model onto a tool needing an explicit partition field id (such as `cdk-glue-iceberg-table`) must be able
+to pin them rather than fall back to positional allocation. As with column ids, the validator only checks
+the ones you declare, so partition field ids are all-or-nothing per table. Checks:
+
+- **`ICEBERG_PARTITION_FIELD_ID_ALL_OR_NONE`** (error) — either every partition declares a `fieldId` or
+  none do; a table that pins some but not all partition ids is rejected.
+- **`ICEBERG_PARTITION_FIELD_ID_RANGE`** (error) — a declared `fieldId` must be an integer `>= 1000`.
+  Iceberg reserves ids below 1000 for data-schema fields and starts partition field ids at 1000.
+- **`ICEBERG_PARTITION_FIELD_ID_UNIQUE`** (error) — declared ids must be unique within the table's
+  partition list; two partitions may not share a `fieldId`. An id that already failed
+  `ICEBERG_PARTITION_FIELD_ID_RANGE` is excluded from the uniqueness check, so an invalid id is reported
+  once rather than also as a duplicate.
+
+The evolution rule is the inverse of the column-id story: an untouched partition field keeps its id
+forever, but any change to a field — a different transform or source column — makes it a **new** field
+that takes a fresh, never-before-used id, and the old id retires with the old spec. Never reuse any id
+that has ever appeared in the table's spec history. The field is engine-specific; non-Iceberg engines
+ignore it.
+
 ### Column types (Iceberg)
 
 Iceberg column types are the primitives (`boolean`, `int`, `long`, `float`, `double`, `date`, `time`,
@@ -364,7 +387,9 @@ TOAST-able types is out of scope for v0 — the value-domain checks above are th
   (`identity`, `year`, `month`, `day`, `hour`, `void`, `bucket[N]`, `truncate[W]`). The transform must
   be legal on the source column's type (e.g. `hour` needs a timestamp). Multiple partitions may share
   the same source column with different transforms (e.g. `year(ts)` and `month(ts)`); the
-  (source column, transform) pair must be unique. Type and transform names are case-insensitive.
+  (source column, transform) pair must be unique. Type and transform names are case-insensitive. Each
+  partition may also carry an optional `fieldId` (all-or-nothing per table, integer `>= 1000`, unique) —
+  see "Partition field ids (Iceberg)" above.
 - **`postgres_18`** — declarative partitioning: each partition entry names an existing key column
   (`name`) and a strategy (`type`: `range`, `list`, or `hash`, case-insensitive). A table partitions by
   one strategy over one or more key columns, so all entries must share the same strategy. Every

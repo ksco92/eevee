@@ -3124,6 +3124,211 @@ test('field ids are ignored for non-Iceberg engines', () => {
     expect(result).not.toContain('ICEBERG_FIELD_ID_ALL_OR_NONE');
 });
 
+/// Iceberg partition field ids
+
+test('fully pinned Iceberg partition field ids produce no violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('ts', 'timestamp'),
+                col('region', 'string'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('ts', 'day', 1000),
+                part('region', 'identity', 1001),
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(world)).toHaveLength(0);
+});
+
+test('partitions without any field ids produce no partition-field-id violations', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('ts', 'timestamp'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('ts', 'day'),
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('ICEBERG_PARTITION_FIELD_ID_ALL_OR_NONE');
+    expect(result).not.toContain('ICEBERG_PARTITION_FIELD_ID_RANGE');
+    expect(result).not.toContain('ICEBERG_PARTITION_FIELD_ID_UNIQUE');
+});
+
+test('ICEBERG_PARTITION_FIELD_ID_ALL_OR_NONE fires when only some partitions are pinned', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('ts', 'timestamp'),
+                col('region', 'string'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('ts', 'day', 1000),
+                part('region', 'identity'),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_PARTITION_FIELD_ID_ALL_OR_NONE');
+});
+
+test('ICEBERG_PARTITION_FIELD_ID_RANGE fires on a fieldId below 1000', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('ts', 'timestamp'),
+                col('region', 'string'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('ts', 'day', 999),
+                part('region', 'identity', 1001),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_PARTITION_FIELD_ID_RANGE');
+});
+
+test('ICEBERG_PARTITION_FIELD_ID_UNIQUE fires when two partitions share a fieldId', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('ts', 'timestamp'),
+                col('region', 'string'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('ts', 'day', 1000),
+                part('region', 'identity', 1000),
+            ],
+        }),
+    ]);
+    expect(codes(runSemanticRules(world))).toContain('ICEBERG_PARTITION_FIELD_ID_UNIQUE');
+});
+
+test('a below-min partition fieldId is reported once and excluded from the uniqueness check', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('ts', 'timestamp'),
+                col('region', 'string'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('ts', 'day', 999),
+                part('region', 'identity', 999),
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result.filter((code) => code === 'ICEBERG_PARTITION_FIELD_ID_RANGE')).toHaveLength(2);
+    expect(result).not.toContain('ICEBERG_PARTITION_FIELD_ID_UNIQUE');
+});
+
+test('partition field ids are ignored for non-Iceberg engines', () => {
+    const world = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'postgres_18',
+            columns: [
+                col('created_at', 'timestamp'),
+                col('a', 'integer'),
+            ],
+            primaryKey: [
+                'a',
+                'created_at',
+            ],
+            partitions: [
+                part('created_at', 'range', 1000),
+            ],
+        }),
+    ]);
+    const result = codes(runSemanticRules(world));
+    expect(result).not.toContain('ICEBERG_PARTITION_FIELD_ID_ALL_OR_NONE');
+});
+
+test('column ids and partition field ids are independent all-or-nothing sets', () => {
+    const pinnedColumnsOnly = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('ts', 'timestamp', undefined, 1),
+                col('a', 'long', undefined, 2),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('ts', 'day'),
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(pinnedColumnsOnly)).toHaveLength(0);
+
+    const pinnedPartitionsOnly = makeWorld([
+        makeTable({
+            name: 't',
+            tableType: 'iceberg_parquet_v2',
+            formatVersion: 2,
+            columns: [
+                col('ts', 'timestamp'),
+                col('a', 'long'),
+            ],
+            primaryKey: [
+                'a',
+            ],
+            partitions: [
+                part('ts', 'day', 1000),
+            ],
+        }),
+    ]);
+    expect(runSemanticRules(pinnedPartitionsOnly)).toHaveLength(0);
+});
+
 /// Iceberg table properties
 
 function icebergWithProps(tableProperties: Record<string, string>) {

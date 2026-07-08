@@ -56,6 +56,53 @@ test('a bad enum value fails structural validation', () => {
     expect(result.valid).toBe(false);
 });
 
+test('a partition may carry an optional fieldId', () => {
+    const result = validateStructure('table', {
+        ...validTable,
+        tableType: 'iceberg_parquet_v2',
+        partitions: [
+            {
+                name: 'a',
+                type: 'identity',
+                description: 'partition a',
+                fieldId: 1000,
+            },
+        ],
+    });
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+});
+
+test('an unknown property on a partition fails structural validation', () => {
+    const result = validateStructure('table', {
+        ...validTable,
+        partitions: [
+            {
+                name: 'a',
+                type: 'identity',
+                description: 'partition a',
+                surprise: true,
+            },
+        ],
+    });
+    expect(result.valid).toBe(false);
+});
+
+test('a column may not carry a partition fieldId', () => {
+    const result = validateStructure('table', {
+        ...validTable,
+        columns: [
+            {
+                name: 'a',
+                type: 'int',
+                description: 'col a',
+                fieldId: 1000,
+            },
+        ],
+    });
+    expect(result.valid).toBe(false);
+});
+
 test('a well-formed schema description passes', () => {
     const result = validateStructure('schema', {
         specVersion: '0',

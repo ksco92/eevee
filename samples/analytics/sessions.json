@@ -55,12 +55,14 @@
         {
             "name": "started_at",
             "type": "day",
-            "description": "Daily partition derived from the session start."
+            "description": "Daily partition derived from the session start.",
+            "fieldId": 1000
         },
         {
             "name": "user_id",
             "type": "bucket[8]",
-            "description": "Hash-bucket the user id into 8 buckets."
+            "description": "Hash-bucket the user id into 8 buckets.",
+            "fieldId": 1001
         }
     ],
     "sortOrder": [

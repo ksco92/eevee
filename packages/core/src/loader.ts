@@ -110,6 +110,7 @@ function normalizePartitions(value: unknown): Partition[] {
             name: asString(record.name),
             type: asString(record.type),
             description: asString(record.description),
+            fieldId: asOptionalNumber(record.fieldId),
         };
     });
 }
