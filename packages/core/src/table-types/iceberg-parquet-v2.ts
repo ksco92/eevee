@@ -73,6 +73,12 @@ export class IcebergParquetV2Table extends TableTypeBase {
     protected static readonly EXPECTED_FORMAT_VERSION = 2;
 
     /**
+     * The lowest legal Iceberg partition field id. Iceberg reserves ids below
+     * 1000 for data-schema fields and starts partition field ids at 1000.
+     */
+    private static readonly MIN_PARTITION_FIELD_ID = 1000;
+
+    /**
      * Validate a column type against the Iceberg type registry.
      *
      * @param type Type string from a column definition.
@@ -282,6 +288,7 @@ export class IcebergParquetV2Table extends TableTypeBase {
             ...this.sortOrderViolations(),
             ...this.identifierFieldViolations(),
             ...this.fieldIdViolations(),
+            ...this.partitionFieldIdViolations(),
         ];
     }
 
@@ -347,6 +354,79 @@ export class IcebergParquetV2Table extends TableTypeBase {
                 }));
             }
             seen.add(id);
+        });
+
+        return violations;
+    }
+
+    /**
+     * Validate Iceberg partition field ids — the ids Iceberg assigns to
+     * partition fields for spec evolution. Pinning them is what lets a source
+     * translator populate the required `fieldId` on `cdk-glue-iceberg-table`
+     * without falling back to positional allocation, so they are
+     * all-or-nothing per table: either every partition declares a `fieldId` or
+     * none do. When present, each id must be an integer >= 1000 (Iceberg
+     * reserves lower ids for data-schema fields) and unique within the table's
+     * partition list.
+     *
+     * Emits `ICEBERG_PARTITION_FIELD_ID_ALL_OR_NONE`,
+     * `ICEBERG_PARTITION_FIELD_ID_RANGE`, and
+     * `ICEBERG_PARTITION_FIELD_ID_UNIQUE`.
+     *
+     * @returns Every partition-field-id violation.
+     */
+    private partitionFieldIdViolations(): Violation[] {
+        const violations: Violation[] = [];
+        const {
+            partitions,
+        } = this.definition;
+
+        const withFieldId = partitions.filter((partition) => partition.fieldId !== undefined);
+        if (withFieldId.length === 0) {
+            return [];
+        }
+
+        if (withFieldId.length !== partitions.length) {
+            violations.push(this.violation({
+                level: 'error',
+                code: 'ICEBERG_PARTITION_FIELD_ID_ALL_OR_NONE',
+                field: 'partitions',
+                message: `either every partition declares a fieldId or none do; ${withFieldId.length} `
+                    + `of ${partitions.length} partitions have a fieldId`,
+            }));
+        }
+
+        const min = IcebergParquetV2Table.MIN_PARTITION_FIELD_ID;
+        const seen = new Set<number>();
+        partitions.forEach((partition, index) => {
+            const {
+                fieldId,
+            } = partition;
+            if (fieldId === undefined) {
+                return;
+            }
+            // Integer-ness is enforced structurally by the JSON Schema, so a
+            // fieldId that reaches the engine is always an integer; only its
+            // range is checked here.
+            if (fieldId < min) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_PARTITION_FIELD_ID_RANGE',
+                    field: `partitions[${index}].fieldId`,
+                    message: `partition "${partition.name}" fieldId ${fieldId} must be an integer >= ${min}`,
+                }));
+                return;
+            }
+            if (seen.has(fieldId)) {
+                violations.push(this.violation({
+                    level: 'error',
+                    code: 'ICEBERG_PARTITION_FIELD_ID_UNIQUE',
+                    field: `partitions[${index}].fieldId`,
+                    message: `partition "${partition.name}" reuses fieldId ${fieldId}; `
+                        + 'fieldIds must be unique within the table',
+                }));
+            }
+            seen.add(fieldId);
         });
 
         return violations;

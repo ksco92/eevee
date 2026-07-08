@@ -96,6 +96,21 @@ export interface Partition {
 
     /** Human description. */
     readonly description: string;
+
+    /**
+     * Iceberg partition field id. Optional and all-or-nothing per
+     * table: either every partition declares a `fieldId` or none do. When
+     * present each must be an integer >= 1000 and unique within the table's
+     * partition list. Other engines ignore it.
+     *
+     * Evolution rule (the inverse of the column-id story only in emphasis): an
+     * untouched partition field keeps its id forever, but any change to a
+     * field — a different transform or source column — makes it a *new* field
+     * that must take a fresh, never-before-used id, and the old id retires with
+     * the old spec. Never reuse any id that has ever appeared in the table's
+     * spec history.
+     */
+    readonly fieldId?: number;
 }
 
 /**

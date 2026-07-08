@@ -39,11 +39,12 @@ export function col(name: string, type: string, nullable?: boolean, id?: number)
 }
 
 /** Convenience partition factory. */
-export function part(name: string, type: string): Partition {
+export function part(name: string, type: string, fieldId?: number): Partition {
     return {
         name,
         type,
         description: `partition ${name}`,
+        fieldId,
     };
 }
 
