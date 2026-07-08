@@ -98,7 +98,7 @@ export interface Partition {
     readonly description: string;
 
     /**
-     * Iceberg partition field id (Iceberg). Optional and all-or-nothing per
+     * Iceberg partition field id. Optional and all-or-nothing per
      * table: either every partition declares a `fieldId` or none do. When
      * present each must be an integer >= 1000 and unique within the table's
      * partition list. Other engines ignore it.
