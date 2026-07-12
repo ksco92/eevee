@@ -224,6 +224,13 @@
             "include": []
         }
     ],
+    "dataQuality": {
+        "awsDqdl": [
+            "ColumnValues \"visit_count\" >= 0",
+            "IsComplete \"email\"",
+            "ColumnValues \"email\" matches \"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$\""
+        ]
+    },
     "dependsOn": [
         "raw.web_events"
     ],

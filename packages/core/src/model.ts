@@ -269,6 +269,21 @@ export interface HiveStorage {
     readonly serdeProperties: Record<string, string>;
 }
 
+/**
+ * Compute-namespaced data-quality pass-through. `awsDqdl` entries are opaque
+ * AWS Glue DQDL rule strings (see
+ * https://docs.aws.amazon.com/glue/latest/dg/dqdl.html); eevee stores them but
+ * never parses or semantically validates their content. Allowed on every
+ * `tableType`.
+ */
+export interface DataQuality {
+    /**
+     * AWS Glue DQDL rules, one string per rule (e.g. `ColumnValues "age" >=
+     * 0`), not the `Rules = [ ... ]` wrapper. Opaque; consumers join them.
+     */
+    readonly awsDqdl: string[];
+}
+
 /** A foreign-key reference to a column in another table. */
 export interface ForeignKey {
     /** Referenced table in `schema.table` format. */
@@ -340,6 +355,12 @@ export interface TableDefinition {
 
     /** Hive storage format / SerDe spec. Optional; other engines ignore it. */
     readonly storage?: HiveStorage;
+
+    /**
+     * Opaque AWS Glue data-quality pass-through. Optional; allowed on every
+     * `tableType`. Eevee never parses or semantically validates its content.
+     */
+    readonly dataQuality?: DataQuality;
 
     /**
      * Engine table properties as a string→string map (e.g. Iceberg

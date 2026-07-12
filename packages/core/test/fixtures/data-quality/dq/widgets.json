@@ -1,0 +1,27 @@
+{
+    "specVersion": "0",
+    "description": "Table with a hand-written AWS Glue DQDL pass-through.",
+    "tableType": "hive_parquet",
+    "isRawData": true,
+    "columns": [
+        {
+            "name": "widget_id",
+            "type": "bigint",
+            "description": "Primary key."
+        },
+        {
+            "name": "weight",
+            "type": "double",
+            "description": "Weight in grams."
+        }
+    ],
+    "primaryKey": [
+        "widget_id"
+    ],
+    "dataQuality": {
+        "awsDqdl": [
+            "IsComplete \"widget_id\"",
+            "ColumnValues \"weight\" >= 0"
+        ]
+    }
+}

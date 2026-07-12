@@ -15,6 +15,7 @@ import {
     Bucketing,
     CheckConstraint,
     Column,
+    DataQuality,
     ExclusionConstraint,
     ForeignKey,
     HiveStorage,
@@ -228,6 +229,16 @@ function normalizeHiveStorage(value: unknown): HiveStorage | undefined {
     };
 }
 
+function normalizeDataQuality(value: unknown): DataQuality | undefined {
+    if (value === null || typeof value !== 'object') {
+        return undefined;
+    }
+    const record = asRecord(value);
+    return {
+        awsDqdl: asStringArray(record.awsDqdl),
+    };
+}
+
 function normalizeStringMap(value: unknown): Record<string, string> {
     const record = asRecord(value);
     const result: Record<string, string> = {};
@@ -274,6 +285,7 @@ function normalizeTableDefinition(raw: unknown): TableDefinition {
         bucketing: normalizeBucketing(record.bucketing),
         skewedBy: normalizeSkewedBy(record.skewedBy),
         storage: normalizeHiveStorage(record.storage),
+        dataQuality: normalizeDataQuality(record.dataQuality),
         tableProperties: normalizeStringMap(record.tableProperties),
         dependsOn: asStringArray(record.dependsOn),
         foreignKeys: normalizeForeignKeys(record.foreignKeys),

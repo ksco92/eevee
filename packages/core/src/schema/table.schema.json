@@ -108,6 +108,9 @@
         "storage": {
             "$ref": "#/definitions/hiveStorage"
         },
+        "dataQuality": {
+            "$ref": "#/definitions/dataQuality"
+        },
         "tableProperties": {
             "type": "object",
             "additionalProperties": {
@@ -346,6 +349,19 @@
                     "type": "object",
                     "additionalProperties": {
                         "type": "string"
+                    }
+                }
+            }
+        },
+        "dataQuality": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "awsDqdl": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
                     }
                 }
             }
