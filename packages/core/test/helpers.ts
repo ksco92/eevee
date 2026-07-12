@@ -6,6 +6,7 @@ import {
     Bucketing,
     CheckConstraint,
     Column,
+    DataQuality,
     ExclusionConstraint,
     ForeignKey,
     HiveStorage,
@@ -67,6 +68,7 @@ export interface TableInput {
     bucketing?: Bucketing;
     skewedBy?: SkewedBy;
     storage?: HiveStorage;
+    dataQuality?: DataQuality;
     tableProperties?: Record<string, string>;
     dependsOn?: string[];
     foreignKeys?: ForeignKey[];
@@ -101,6 +103,7 @@ export function makeTable(input: TableInput): TableTypeBase {
             bucketing: input.bucketing,
             skewedBy: input.skewedBy,
             storage: input.storage,
+            dataQuality: input.dataQuality,
             tableProperties: input.tableProperties ?? {},
             dependsOn: input.dependsOn ?? [],
             foreignKeys: input.foreignKeys ?? [],

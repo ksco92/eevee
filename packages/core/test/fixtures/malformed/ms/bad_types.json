@@ -26,6 +26,12 @@
         ],
         "bucketCount": "lots"
     },
+    "dataQuality": {
+        "awsDqdl": [
+            "IsComplete \"a\"",
+            5
+        ]
+    },
     "exclusionConstraints": [
         {
             "name": "x",

@@ -90,6 +90,7 @@ Mandatory: `specVersion`, `description`, `tableType`, `isRawData`, `columns`, `p
 | `checkConstraints` | no | Postgres only: CHECK constraints (`name`, opaque `expression`, referenced `columns`). Other engines ignore them. |
 | `exclusionConstraints` | no | Postgres only: EXCLUDE constraints (`name`, `using`, `elements` of `column`/`operator`). Other engines ignore them. |
 | `tableProperties` | no | String→string map of engine settings. Only keys with a closed legal domain are validated per engine (see below); unknown keys pass through. |
+| `dataQuality` | no | Opaque AWS Glue DQDL pass-through (`awsDqdl`). Allowed on every engine; see below. |
 | `dependsOn` | conditionally | Required & non-empty when `isRawData` is `false`. Entries are `schema.table`. |
 | `foreignKeys` | no | Each: `sourceTable` (`schema.table`), `sourceColumn`, `localColumn`, `allowNulls`. |
 
@@ -300,6 +301,18 @@ For `hive_parquet` the validated keys are (values compared case-insensitively):
 - **ACID storage** (**`HIVE_FULL_ACID_REQUIRES_ORC`**, error) — full ACID
   (`transactional=true` without `transactional_properties=insert_only`) requires ORC storage, so a
   `hive_parquet` table may only use insert-only ACID.
+
+### Data quality (AWS Glue)
+
+A table may declare a `dataQuality` object with one property, `awsDqdl`: an array of hand-written
+[AWS Glue DQDL](https://docs.aws.amazon.com/glue/latest/dg/dqdl.html) rule strings. This is a
+compute-namespaced pass-through, allowed on every `tableType`. Eevee treats each entry as **opaque**:
+it stores the string but never parses or semantically validates DQDL syntax. Structural validation
+only checks the shape — `awsDqdl` is a non-empty-string array, and the `dataQuality` object rejects
+unknown sibling keys.
+
+Each entry is a single DQDL rule (e.g. `ColumnValues "age" >= 0`), not the `Rules = [ ... ]` wrapper —
+a consumer that builds a Glue `DataQualityRuleset` joins the entries into that wrapper itself.
 
 ### Bucketing (Hive)
 

@@ -112,6 +112,9 @@ test('normalizes a structurally invalid table without throwing', () => {
         'good.key': 'ok',
     });
     expect(table?.definition.bucketing?.bucketCount).toBe(0);
+    expect(table?.definition.dataQuality?.awsDqdl).toEqual([
+        'IsComplete "a"',
+    ]);
     expect(table?.definition.exclusionConstraints[0].elements[0].column).toBe('a');
     expect(table?.definition.exclusionConstraints[0].elements[0].operator).toBe('=');
     expect(table?.definition.primaryKey).toEqual([
@@ -119,6 +122,27 @@ test('normalizes a structurally invalid table without throwing', () => {
     ]);
     expect(table?.definition.isRawData).toBe(false);
     expect(table?.definition.foreignKeys[0].allowNulls).toBe(false);
+});
+
+test('normalizes a valid dataQuality.awsDqdl pass-through onto the table definition', () => {
+    const {
+        world, violations,
+    } = loadRoot(fixture('data-quality'));
+    expect(violations).toHaveLength(0);
+
+    const table = world.tables.get('dq.widgets');
+    expect(table?.definition.dataQuality?.awsDqdl).toEqual([
+        'IsComplete "widget_id"',
+        'ColumnValues "weight" >= 0',
+    ]);
+});
+
+test('leaves dataQuality undefined when the table omits it', () => {
+    const {
+        world,
+    } = loadRoot(EXAMPLES);
+    const orders = world.tables.get('analytics.orders');
+    expect(orders?.definition.dataQuality).toBeUndefined();
 });
 
 test('reports a structurally invalid schema-description file', () => {

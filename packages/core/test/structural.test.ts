@@ -103,6 +103,57 @@ test('a column may not carry a partition fieldId', () => {
     expect(result.valid).toBe(false);
 });
 
+test('a table may carry a valid dataQuality.awsDqdl pass-through', () => {
+    const result = validateStructure('table', {
+        ...validTable,
+        dataQuality: {
+            awsDqdl: [
+                'ColumnValues "a" >= 0',
+                'IsComplete "a"',
+            ],
+        },
+    });
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+});
+
+test('a non-string dataQuality.awsDqdl entry fails structural validation', () => {
+    const result = validateStructure('table', {
+        ...validTable,
+        dataQuality: {
+            awsDqdl: [
+                42,
+            ],
+        },
+    });
+    expect(result.valid).toBe(false);
+});
+
+test('an empty-string dataQuality.awsDqdl entry fails structural validation', () => {
+    const result = validateStructure('table', {
+        ...validTable,
+        dataQuality: {
+            awsDqdl: [
+                '',
+            ],
+        },
+    });
+    expect(result.valid).toBe(false);
+});
+
+test('an unknown key inside dataQuality fails structural validation', () => {
+    const result = validateStructure('table', {
+        ...validTable,
+        dataQuality: {
+            awsDqdl: [
+                'IsComplete "a"',
+            ],
+            surprise: true,
+        },
+    });
+    expect(result.valid).toBe(false);
+});
+
 test('a well-formed schema description passes', () => {
     const result = validateStructure('schema', {
         specVersion: '0',
