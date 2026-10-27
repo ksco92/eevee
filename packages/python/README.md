@@ -26,6 +26,7 @@ for violation in result.errors:
 
 dag_svg = flexdataset.graph("path/to/root")   # dependency DAG
 er_svg = flexdataset.er("path/to/root")       # entity-relationship diagram
+er_keys_svg = flexdataset.er("path/to/root", keys_only=True)  # key columns only
 ```
 
 Or use the client directly:
