@@ -32,12 +32,13 @@ const USAGE = `flexdataset — Flexible Dataset Definition validator
 Usage:
   flexdataset validate <root> [--format json|human]
   flexdataset graph <root> [--out <file.svg>]
-  flexdataset er <root> [--out <file.svg>]
+  flexdataset er <root> [--out <file.svg>] [--keys-only]
   flexdataset help
 
 Options:
-  --format   Output format for "validate" (default: human).
-  --out      Write SVG to a file instead of stdout (graph / er).`;
+  --format     Output format for "validate" (default: human).
+  --out        Write SVG to a file instead of stdout (graph / er).
+  --keys-only  Show only primary-key and foreign-key columns (er).`;
 
 function printHuman(result: ValidationResult): void {
     const errors = result.violations.filter((violation) => violation.level === 'error');
@@ -118,9 +119,14 @@ async function runDiagram(command: 'graph' | 'er', rest: string[]): Promise<numb
         value: out, positional, 
     } = parseOptions(rest, '--out');
 
-    const root = positional[0];
+    const keysOnly = positional.includes('--keys-only');
+    const root = positional.find((arg) => arg !== '--keys-only');
     if (!root) {
-        console.error(`usage: flexdataset ${command} <root> [--out <file.svg>]`);
+        console.error(`usage: flexdataset ${command} <root> [--out <file.svg>]${command === 'er' ? ' [--keys-only]' : ''}`);
+        return 1;
+    }
+    if (keysOnly && command === 'graph') {
+        console.error('--keys-only applies to "er" only');
         return 1;
     }
 
@@ -128,7 +134,9 @@ async function runDiagram(command: 'graph' | 'er', rest: string[]): Promise<numb
         const world = loadValidatedRoot(root, {
             onWarning: (warning) => console.warn(formatViolation(warning)),
         });
-        const dot = command === 'graph' ? buildDagDot(world) : buildErDot(world);
+        const dot = command === 'graph' ? buildDagDot(world) : buildErDot(world, {
+            keysOnly,
+        });
         const svg = await renderDot(dot);
         if (out) {
             fs.writeFileSync(out, svg, 'utf-8');

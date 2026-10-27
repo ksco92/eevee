@@ -84,8 +84,9 @@ def test_graph_returns_svg() -> None:
     with patch(
         "flexdataset.client.subprocess.run",
         return_value=_completed(stdout="<svg/>", returncode=0),
-    ):
+    ) as mock_run:
         assert FddClient(command=["flexdataset"]).graph("root") == "<svg/>"
+        assert mock_run.call_args.args[0] == ["flexdataset", "graph", "root"]
 
 
 def test_er_returns_svg() -> None:
@@ -93,8 +94,24 @@ def test_er_returns_svg() -> None:
     with patch(
         "flexdataset.client.subprocess.run",
         return_value=_completed(stdout="<svg/>", returncode=0),
-    ):
+    ) as mock_run:
         assert FddClient(command=["flexdataset"]).er("root") == "<svg/>"
+        assert mock_run.call_args.args[0] == ["flexdataset", "er", "root"]
+
+
+def test_er_keys_only_passes_flag() -> None:
+    """Test that er with keys_only appends the --keys-only flag."""
+    with patch(
+        "flexdataset.client.subprocess.run",
+        return_value=_completed(stdout="<svg/>", returncode=0),
+    ) as mock_run:
+        FddClient(command=["flexdataset"]).er("root", keys_only=True)
+        assert mock_run.call_args.args[0] == [
+            "flexdataset",
+            "er",
+            "root",
+            "--keys-only",
+        ]
 
 
 def test_render_raises_with_stderr() -> None:
@@ -127,3 +144,6 @@ def test_module_level_helpers() -> None:
         assert validate("r") == "v"
         assert graph("r") == "g"
         assert er("r") == "e"
+        instance.er.assert_called_with("r", keys_only=False)
+        er("r", keys_only=True)
+        instance.er.assert_any_call("r", keys_only=True)

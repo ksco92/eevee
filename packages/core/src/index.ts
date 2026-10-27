@@ -64,6 +64,7 @@ export {
 } from './diagram/dag';
 export {
     buildErDot,
+    ErDotOptions,
 } from './diagram/er';
 export {
     renderDot,

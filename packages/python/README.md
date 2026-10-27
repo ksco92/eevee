@@ -24,8 +24,9 @@ print(result.ok, len(result.errors), len(result.warnings))
 for violation in result.errors:
     print(violation.code, violation.schema, violation.table, violation.message)
 
-dag_svg = flexdataset.graph("path/to/root")   # dependency DAG
-er_svg = flexdataset.er("path/to/root")       # entity-relationship diagram
+dag_svg = flexdataset.graph("path/to/root")                    # dependency DAG
+er_svg = flexdataset.er("path/to/root")                        # entity-relationship diagram
+er_keys_svg = flexdataset.er("path/to/root", keys_only=True)   # key columns only
 ```
 
 Or use the client directly:

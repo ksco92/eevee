@@ -64,7 +64,8 @@ is needed):
 - `flexdataset graph <root>`: the **dependency DAG**. One node per table (table names only), clustered by
   schema, with an edge from each upstream table to each downstream table (`dependsOn`).
 - `flexdataset er <root>`: the **entity-relationship diagram**. Each table with its columns (primary-key
-  columns marked `PK`) and a foreign-key edge to each referenced table.
+  columns marked `PK`, foreign-key columns marked `FK`) and a foreign-key edge to each referenced table.
+  Add `--keys-only` to list only the key columns of each table, which keeps wide tables readable.
 
 Both write the SVG to stdout, or to a file with `--out <file.svg>` (in which case a short confirmation
 goes to stderr). Output is deterministic, so a committed SVG diffs cleanly when the dataset changes.
