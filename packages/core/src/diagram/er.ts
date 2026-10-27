@@ -1,6 +1,6 @@
 /**
  * Entity-relationship (ER) rendering. Produces Graphviz DOT where each table is
- * an HTML-label node listing its columns (primary-key columns marked `PK`), with
+ * an HTML-label node listing its columns (primary-key columns marked `PK`, foreign-key columns marked `FK`), with
  * a foreign-key edge from each table to the table it references.
  *
  * Built deterministically (tables and foreign keys sorted; columns kept in
@@ -21,13 +21,20 @@ function escapeDot(value: string): string {
     return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
+/** Options for `buildErDot`. */
+export interface ErDotOptions {
+    /** List only primary-key and foreign-key columns in each table. */
+    keysOnly?: boolean;
+}
+
 /**
  * Build Graphviz DOT for the entity-relationship diagram of a loaded root.
  *
  * @param world The loaded dataset root.
+ * @param options Rendering options.
  * @returns A DOT `digraph` document.
  */
-export function buildErDot(world: World): string {
+export function buildErDot(world: World, options: ErDotOptions = {}): string {
     const lines: string[] = [
         'digraph er {',
         '    rankdir=LR;',
@@ -40,11 +47,17 @@ export function buildErDot(world: World): string {
 
     for (const table of tables) {
         const primaryKey = new Set(table.definition.primaryKey);
+        const foreignKeyColumns = new Set(table.definition.foreignKeys.map((foreignKey) => foreignKey.localColumn));
         lines.push(`    "${escapeDot(table.qualifiedName)}" [label=<`);
         lines.push('        <table border="0" cellborder="1" cellspacing="0">');
         lines.push(`        <tr><td bgcolor="lightgrey"><b>${htmlEscape(table.qualifiedName)}</b></td></tr>`);
         for (const column of table.definition.columns) {
-            const marker = primaryKey.has(column.name) ? 'PK ' : '';
+            const isPrimaryKey = primaryKey.has(column.name);
+            const isForeignKey = foreignKeyColumns.has(column.name);
+            if (options.keysOnly && !isPrimaryKey && !isForeignKey) {
+                continue;
+            }
+            const marker = `${isPrimaryKey ? 'PK ' : ''}${isForeignKey ? 'FK ' : ''}`;
             const cell = `${htmlEscape(marker + column.name)} : ${htmlEscape(column.type)}`;
             lines.push(`        <tr><td align="left">${cell}</td></tr>`);
         }
