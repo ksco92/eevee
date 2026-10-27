@@ -48,30 +48,33 @@ class FddClient:
         :raises FddError: When the CLI fails to render.
         :return: The SVG markup.
         """
-        return self._render("graph", root)
+        return self._render(["graph", str(root)])
 
-    def er(self: Self, root: str | Path) -> str:
+    def er(self: Self, root: str | Path, keys_only: bool = False) -> str:
         """
         Render the entity-relationship diagram as SVG.
 
         :param root: Path to the dataset root.
+        :param keys_only: Show only primary-key and foreign-key columns.
         :raises FddError: When the CLI fails to render.
         :return: The SVG markup.
         """
-        return self._render("er", root)
+        args = ["er", str(root)]
+        if keys_only:
+            args.append("--keys-only")
+        return self._render(args)
 
-    def _render(self: Self, command: str, root: str | Path) -> str:
+    def _render(self: Self, args: list[str]) -> str:
         """
         Run a diagram command and return its SVG output.
 
-        :param command: The diagram command (``graph`` or ``er``).
-        :param root: Path to the dataset root.
+        :param args: The diagram command and its arguments.
         :raises FddError: When the CLI exits non-zero.
         :return: The SVG markup.
         """
-        completed = self._run([command, str(root)])
+        completed = self._run(args)
         if completed.returncode != 0:
-            raise FddError(completed.stderr.strip() or f"flexdataset {command} failed")
+            raise FddError(completed.stderr.strip() or f"flexdataset {args[0]} failed")
         return completed.stdout
 
     def _run(self: Self, args: list[str]) -> "subprocess.CompletedProcess[str]":
@@ -109,11 +112,12 @@ def graph(root: str | Path) -> str:
     return FddClient().graph(root)
 
 
-def er(root: str | Path) -> str:
+def er(root: str | Path, keys_only: bool = False) -> str:
     """
     Render the entity-relationship diagram as SVG using the default binary.
 
     :param root: Path to the dataset root.
+    :param keys_only: Show only primary-key and foreign-key columns.
     :return: The SVG markup.
     """
-    return FddClient().er(root)
+    return FddClient().er(root, keys_only=keys_only)
