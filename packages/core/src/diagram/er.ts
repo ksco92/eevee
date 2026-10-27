@@ -1,7 +1,8 @@
 /**
  * Entity-relationship (ER) rendering. Produces Graphviz DOT where each table is
- * an HTML-label node listing its columns (primary-key columns marked `PK`, foreign-key columns marked `FK`), with
- * a foreign-key edge from each table to the table it references.
+ * an HTML-label node listing its columns (primary-key columns marked `PK`,
+ * foreign-key columns marked `FK`), with a foreign-key edge from each table to
+ * the table it references.
  *
  * Built deterministically (tables and foreign keys sorted; columns kept in
  * declared order) for stable, diff-friendly SVG output.

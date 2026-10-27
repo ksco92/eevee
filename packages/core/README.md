@@ -16,10 +16,11 @@ Or download a standalone binary (no Node required) from
 ## Use
 
 ```bash
-flexdataset validate <root>                 # structural + semantic checks
-flexdataset validate <root> --format json   # machine-readable violations
-flexdataset graph <root> --out dag.svg      # dependency DAG
-flexdataset er <root> --out er.svg          # entity-relationship diagram
+flexdataset validate <root>                      # structural + semantic checks
+flexdataset validate <root> --format json        # machine-readable violations
+flexdataset graph <root> --out dag.svg           # dependency DAG
+flexdataset er <root> --out er.svg               # entity-relationship diagram
+flexdataset er <root> --keys-only --out er.svg   # key columns only
 ```
 
 `validate` exits non-zero when there are error-level violations. The `graph` and `er` commands render
